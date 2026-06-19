@@ -199,7 +199,7 @@ export class Game {
         handbrake: this.input.handbrake,
       });
       this.physics.step(dt, (h) => this.car.fixedUpdate(h));
-      this.car.syncVisual();
+      this.car.syncVisual(dt);
 
       if (this.driving) this.chaseCam.update(dt);
       else if (this.controls.enabled) this.controls.update();

@@ -55,7 +55,24 @@ export class Vehicle {
 
     this._tmpV = new THREE.Vector3();
     this._fwd = new THREE.Vector3();
-    this.wheels = []; // { mesh? , isFront, isLeft }
+    this.wheels = []; // { isFront, isLeft, radius }
+
+    // --- Feel signals (updated each frame, consumed by camera/audio/effects/HUD) ---
+    this.rpm = 1100;
+    this.gear = 1; // 0 = reverse
+    this.lateralSlip = 0; // 0..1 sideways sliding
+    this.wheelSlip = 0; // 0..1 traction loss (spin/lock)
+    this.steer = 0; // current visual steering angle (rad)
+    this.braking = false;
+    this.wheelsInContact = 0;
+    this.engine = { idle: 1100, redline: 7800, gearTopKmh: [55, 95, 140, 185, 235, 290] };
+
+    // Wheel + light animation state
+    this._spinAngle = 0;
+    this._wheelPivots = []; // { pivot, spinAxis, upAxis, isFront }
+    this._brakeMats = [];
+    this._q1 = new THREE.Quaternion();
+    this._q2 = new THREE.Quaternion();
   }
 
   async load(url, spawn) {
@@ -81,9 +98,65 @@ export class Vehicle {
     this.object3D.add(model);
     this.model = model;
 
+    this._setupWheelsAndLights();
     this._createChassis(spawn);
     this._addWheels();
     return this;
+  }
+
+  /** Find the 4 tyre meshes (to spin/steer) and the brake-light materials. */
+  _setupWheelsAndLights() {
+    this.object3D.updateWorldMatrix(true, true);
+
+    // Brake lights. NOTE: the big body shell uses the (misnamed) 'BackLight'
+    // material, so we must NOT emit on it. Only the small rear-light meshes
+    // (tiny 'BackLight' meshes) and the red 'glossyorange' accent should glow —
+    // and we clone their materials so emitting doesn't tint the shared body.
+    this._brakeMats = [];
+    this.model.traverse((o) => {
+      if (!o.isMesh || Array.isArray(o.material)) return;
+      const name = o.material.name;
+      const verts = o.geometry.attributes.position.count;
+      const isLight = (name === 'BackLight' && verts < 100) || name === 'glossyorange';
+      if (!isLight) return;
+      const mat = o.material.clone();
+      if (!mat.emissive) mat.emissive = new THREE.Color(0x000000);
+      mat.emissiveIntensity = 0;
+      o.material = mat;
+      this._brakeMats.push(mat);
+    });
+
+    // The 4 tyres are the *_black_0 meshes under WheelFront000..003.
+    const tyres = [];
+    this.model.traverse((o) => { if (o.isMesh && /^WheelFront00[0-3]_black/.test(o.name)) tyres.push(o); });
+    if (tyres.length !== 4) return; // degrade gracefully (no wheel animation)
+
+    const objQuat = this.object3D.getWorldQuaternion(new THREE.Quaternion());
+    const lateralWorld = new THREE.Vector3(1, 0, 0).applyQuaternion(objQuat);
+    const upWorld = new THREE.Vector3(0, 1, 0).applyQuaternion(objQuat);
+    const objInv = this.object3D.matrixWorld.clone().invert();
+
+    for (const W of tyres) {
+      W.geometry.computeBoundingBox();
+      const centerMesh = W.geometry.boundingBox.getCenter(new THREE.Vector3());
+      const P = W.parent;
+      // Wheel centre in object-local space → front/rear by z sign.
+      const wWorld = centerMesh.clone().applyMatrix4(W.matrixWorld);
+      const isFront = wWorld.clone().applyMatrix4(objInv).z > 0;
+      // Pivot at the wheel centre so spin/steer rotate it in place.
+      const centerInP = centerMesh.clone().applyMatrix4(W.matrix);
+      const pivot = new THREE.Group();
+      pivot.position.copy(centerInP);
+      P.add(pivot);
+      pivot.attach(W); // keep world transform, reparent under pivot
+      const pInv = P.getWorldQuaternion(new THREE.Quaternion()).invert();
+      this._wheelPivots.push({
+        pivot,
+        spinAxis: lateralWorld.clone().applyQuaternion(pInv).normalize(),
+        upAxis: upWorld.clone().applyQuaternion(pInv).normalize(),
+        isFront,
+      });
+    }
   }
 
   _createChassis(spawn) {
@@ -195,21 +268,76 @@ export class Vehicle {
       this.controller.setWheelBrake(i, b);
     }
 
+    // Feel flags for lights / effects / audio.
+    this.braking = throttle < 0 || this.input.handbrake;
+    const spinning = throttle > 0.5 && Math.abs(fwdSpeed) < 3 ? 1 - Math.abs(fwdSpeed) / 3 : 0;
+    this.wheelSlip = this.input.handbrake ? 1 : Math.max(0, spinning);
+
     this.controller.updateVehicle(h);
   }
 
-  /** Sync the visual model from the chassis (call each render frame). */
-  syncVisual() {
+  /** Sync the visual model + wheels + lights from the chassis (each render frame). */
+  syncVisual(dt = 1 / 60) {
     if (!this.chassis) return;
     const t = this.chassis.translation();
     const r = this.chassis.rotation();
     this.object3D.position.set(t.x, t.y, t.z);
     this.object3D.quaternion.set(r.x, r.y, r.z, r.w);
 
-    // Derived state for camera / HUD.
+    // Derived state for camera / HUD / audio.
     this._fwd.set(0, 0, 1).applyQuaternion(this.object3D.quaternion);
     this.heading = Math.atan2(this._fwd.x, this._fwd.z);
     this.speed = this._forwardSpeed();
+    this.steer = this._steerAngle;
+
+    const lv = this.chassis.linvel();
+    const right = this._tmpV.set(1, 0, 0).applyQuaternion(this.object3D.quaternion);
+    const lateralVel = lv.x * right.x + lv.y * right.y + lv.z * right.z;
+    this.lateralSlip = Math.min(1, Math.abs(lateralVel) / 7);
+
+    let contact = 0;
+    for (let i = 0; i < this.wheels.length; i++) if (this.controller.wheelIsInContact(i)) contact++;
+    this.wheelsInContact = contact;
+
+    this._updateDrivetrain();
+    this._animateWheels(dt);
+    this._updateBrakeLights();
+  }
+
+  _updateDrivetrain() {
+    const kmh = Math.abs(this.speed) * 3.6;
+    const tops = this.engine.gearTopKmh;
+    let g = 0;
+    while (g < tops.length - 1 && kmh > tops[g]) g++;
+    const lower = g > 0 ? tops[g - 1] : 0;
+    const frac = Math.min(1, (kmh - lower) / Math.max(1, tops[g] - lower));
+    let rpm = this.engine.idle + frac * (this.engine.redline - this.engine.idle);
+    if (kmh < 3) rpm = this.engine.idle + Math.max(0, this.input.throttle) * 3200;
+    this.rpm = rpm;
+    this.gear = this.speed < -0.5 ? 0 : g + 1;
+  }
+
+  _animateWheels(dt) {
+    if (!this._wheelPivots.length) return;
+    const radius = this.size.y * 0.35;
+    this._spinAngle += (this.speed / radius) * dt;
+    for (const w of this._wheelPivots) {
+      const spinQ = this._q1.setFromAxisAngle(w.spinAxis, this._spinAngle);
+      if (w.isFront) {
+        const steerQ = this._q2.setFromAxisAngle(w.upAxis, this.steer);
+        w.pivot.quaternion.copy(steerQ).multiply(spinQ);
+      } else {
+        w.pivot.quaternion.copy(spinQ);
+      }
+    }
+  }
+
+  _updateBrakeLights() {
+    const on = this.braking;
+    for (const m of this._brakeMats) {
+      m.emissive.setHex(on ? 0xff2200 : 0x000000);
+      m.emissiveIntensity = on ? 2.5 : 0;
+    }
   }
 
   _forwardSpeed() {
