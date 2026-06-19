@@ -16,8 +16,10 @@ A 3D car racing game built with [Three.js](https://threejs.org/), the
 - **Cars & stats.** Each car is defined in `src/game/cars.js` by ratings out of
   10 (Speed, Acceleration, Grip / *yol tutuşu*, Braking, Handling) that directly
   drive the physics — so new cars are just a new entry + model, and the ratings
-  show in the HUD. The F1 is fast (top speed ~340 km/h) and deliberately
-  demanding: strong RWD power oversteer and twitchy high-speed steering.
+  show in the HUD. The F1 is fast (top speed ~340 km/h) and deliberately loose:
+  reduced grip, lower yaw damping and heavier steering, so it slides when pushed
+  (stable in a straight line, demanding through corners). Grip/feel are all just
+  numbers in `statsToTuning()`.
 
 ## Getting started
 

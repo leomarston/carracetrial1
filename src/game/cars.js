@@ -33,10 +33,10 @@ export function statsToTuning(stats) {
     topSpeed: lerp(stats.speed, 45, 96), // m/s  (≈162 – 346 km/h)
     maxEngineForce: lerp(stats.acceleration, 10000, 22000), // N
     maxBrakeForce: lerp(stats.braking, 5000, 12000), // N
-    frictionSlip: lerp(stats.grip, 1.5, 2.5), // traction
-    sideFriction: lerp(stats.grip, 0.7, 1.3), // lateral grip
-    steerSpeed: lerp(stats.handling, 3.5, 6.5), // how fast steering responds
-    angularDamping: lerp(stats.handling, 0.4, 0.85), // yaw stability
+    frictionSlip: lerp(stats.grip, 0.9, 1.7), // tyre grip — lower = slidier
+    sideFriction: lerp(stats.grip, 0.3, 0.7), // lateral grip multiplier
+    steerSpeed: lerp(stats.handling, 2.5, 4.5), // how fast steering responds (lower = heavier/less darty)
+    angularDamping: lerp(stats.handling, 0.08, 0.4), // yaw resistance — lower = freer to rotate/slide
   };
 }
 

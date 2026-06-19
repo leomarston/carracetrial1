@@ -219,6 +219,11 @@ export class Vehicle {
       { x: -trackHalf, z: -baseHalf, isFront: false, isLeft: false },
     ];
 
+    // Near-neutral, slight understeer safety: the car slides/washes out when
+    // pushed (slippery, momentum-y) but stays catchable on a keyboard.
+    this.frontSide = sus.sideFriction * 0.97;
+    this.rearSide = sus.sideFriction * 1.05;
+
     this.wheels = [];
     defs.forEach((d, i) => {
       this.controller.addWheel({ x: d.x, y: connY, z: d.z }, dir, axle, sus.restLength, wheelRadius);
@@ -228,7 +233,7 @@ export class Vehicle {
       this.controller.setWheelMaxSuspensionTravel(i, sus.maxTravel);
       this.controller.setWheelMaxSuspensionForce(i, sus.maxForce);
       this.controller.setWheelFrictionSlip(i, sus.frictionSlip);
-      this.controller.setWheelSideFrictionStiffness(i, sus.sideFriction);
+      this.controller.setWheelSideFrictionStiffness(i, d.isFront ? this.frontSide : this.rearSide);
       this.wheels.push({ ...d, radius: wheelRadius });
     });
   }
@@ -241,9 +246,9 @@ export class Vehicle {
     const fwdSpeed = this._forwardSpeed();
     const speedMs = Math.abs(fwdSpeed);
 
-    // --- Steering: ease toward target, with only mild high-speed assist so the
-    //     car stays demanding (twitchy) at speed but is still maneuverable slow. ---
-    const speedFactor = Math.max(0.32, 1 - speedMs / (this.topSpeed * 1.25));
+    // --- Steering: ease toward target. Lock falls off with speed so holding the
+    //     key at speed gives a controllable drift instead of a snap-spin. ---
+    const speedFactor = Math.max(0.18, 1 - speedMs / (this.topSpeed * 0.8));
     const target = this.input.steer * this.maxSteerAngle * speedFactor;
     this._steerAngle += (target - this._steerAngle) * Math.min(1, this.steerSpeed * h);
 
@@ -263,7 +268,7 @@ export class Vehicle {
     const powerSlip = throttle > 0.55 && speedMs < this.topSpeed * 0.45
       ? (throttle - 0.55) * (1 - speedMs / (this.topSpeed * 0.45))
       : 0;
-    const rearGrip = this.suspension.frictionSlip * (1 - 0.45 * Math.min(1, powerSlip));
+    const rearGrip = this.suspension.frictionSlip * (1 - 0.1 * Math.min(1, powerSlip));
 
     const driveAll = this.drivenWheels === 'all';
     for (let i = 0; i < this.wheels.length; i++) {
