@@ -29,14 +29,18 @@ const lerp = (v, a, b) => a + (b - a) * (Math.max(0, Math.min(10, v)) / 10);
  * Tuned so a top car is genuinely fast and demanding but still controllable.
  */
 export function statsToTuning(stats) {
+  // Convex curves so the LOW end bites hard: 0 ≈ undrivable, 10 ≈ easy/grippy,
+  // and a mid rating like 3 is already a real handful.
+  const gc = Math.pow(stats.grip / 10, 1.6); // grip falls off fast as the rating drops
+  const hc = Math.pow(stats.handling / 10, 2); // stability falls off even faster
   return {
     topSpeed: lerp(stats.speed, 45, 96), // m/s  (≈162 – 346 km/h)
     maxEngineForce: lerp(stats.acceleration, 10000, 22000), // N
     maxBrakeForce: lerp(stats.braking, 5000, 12000), // N
-    frictionSlip: lerp(stats.grip, 0.9, 1.7), // tyre grip — lower = slidier
-    sideFriction: lerp(stats.grip, 0.3, 0.7), // lateral grip multiplier
-    steerSpeed: lerp(stats.handling, 2.5, 4.5), // how fast steering responds (lower = heavier/less darty)
-    angularDamping: lerp(stats.handling, 0.08, 0.4), // yaw resistance — lower = freer to rotate/slide
+    frictionSlip: 0.5 + 2.4 * gc, // ~0.5 (no grip) .. 2.9 (glued down)
+    sideFriction: 0.12 + 1.3 * gc, // lateral grip: ~0.12 .. 1.42
+    steerSpeed: lerp(stats.handling, 3.0, 5.0), // steering response (lower = heavier)
+    angularDamping: 0.04 + 1.2 * hc, // yaw stability: ~0.04 (spins freely) .. 1.24 (planted)
   };
 }
 
