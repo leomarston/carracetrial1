@@ -18,9 +18,9 @@ export class ChaseCamera {
     const H = car.size.y || 1.6;
 
     this.distance = L * 1.5; // constant horizontal trail distance
-    this.height = H * 2.6;
+    this.height = H * 3.4; // a bit higher for a better view down the road
     this.lookAhead = L * 0.6;
-    this.lookHeight = H * 0.8;
+    this.lookHeight = H * 0.9;
     this.headingEase = 6;
 
     // FOV: widens with speed for a sense of speed.
