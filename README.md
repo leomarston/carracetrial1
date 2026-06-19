@@ -57,9 +57,9 @@ render exactly as authored.
 
 - **Import & sizing** (`src/game/Car.js`): the F1 model carries a 100× scale
   baked into its Sketchfab root matrix (native world size ~84×46×230). We scale
-  it to a target **width** (~29% of the road, since the road — not the car — is
-  the constraint), recenter it so the wheels sit at `y = 0`, and rotate it 180°
-  so its nose points along the driving direction.
+  it to a target **width** so it fits inside a single lane (~72% of the ~11-unit
+  lane), recenter it so the wheels sit at `y = 0`, and rotate it 180° so its nose
+  points along the driving direction.
 - **Start line**: the map's geometry is named, so the start position is derived
   from it: the car spawns centered on the highway under the **"CRESCENT CITY
   NORTH" gantry** (mesh `Finish_Strut001`), facing down the map's longest
@@ -73,7 +73,11 @@ render exactly as authored.
   geometry, not a flat ground plane.
 - **Driving** (arcade): throttle accelerates along the heading, steering rotates
   the heading (more effective the faster you go), with drag, rolling friction
-  and braking/reverse. A chase camera (`src/game/ChaseCamera.js`) trails behind.
+  and braking/reverse.
+- **Chase camera** (`src/game/ChaseCamera.js`): a close third-person camera with
+  a **fixed follow distance** — it sits exactly the same distance behind the car
+  at any speed (no spring/lag on the distance). Only the trailing angle eases, so
+  turns stay smooth while the framing never changes as you accelerate.
 
 ### Attribution (required, CC-BY-4.0)
 

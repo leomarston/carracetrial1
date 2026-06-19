@@ -1,8 +1,12 @@
 import * as THREE from 'three';
 
 /**
- * Third-person chase camera that trails behind the car and looks slightly ahead.
- * Positions are smoothed so it eases behind the car as it turns.
+ * Close third-person chase camera with a FIXED follow distance.
+ *
+ * The camera always sits exactly `distance` behind the car horizontally (plus a
+ * fixed height), so accelerating never changes how far back it is — there is no
+ * spring/lerp on the distance. Only the trailing *angle* eases toward the car's
+ * heading, which keeps turns smooth while the radius stays constant.
  */
 export class ChaseCamera {
   /**
@@ -13,43 +17,61 @@ export class ChaseCamera {
     this.camera = camera;
     this.car = car;
 
-    const L = car.size.z || 80;
-    this.distance = L * 2.6; // behind
-    this.height = (car.size.y || 20) * 3.2; // above
-    this.lookAhead = L * 1.2;
+    const L = car.size.z || 22;
+    const H = car.size.y || 5;
 
-    this._desired = new THREE.Vector3();
+    // Close, fixed rig.
+    this.distance = L * 1.5; // horizontal trail distance (constant)
+    this.height = H * 1.7; // height above the car
+    this.lookAhead = L * 0.6; // aim a little ahead of the car
+    this.lookHeight = H * 0.8;
+    this.headingEase = 6; // how fast the trailing angle catches turns
+
+    this.followHeading = car.heading;
+    this._pos = new THREE.Vector3();
     this._look = new THREE.Vector3();
-    this._tmp = new THREE.Vector3();
-    this._initDone = false;
+    this._init = false;
   }
 
   update(dt) {
-    const car = this.car.object3D;
-    const heading = this.car.heading;
+    const carPos = this.car.object3D.position;
 
-    // Behind the car relative to its heading.
-    const back = this._tmp.set(-Math.sin(heading), 0, -Math.cos(heading));
-    this._desired
-      .copy(car.position)
-      .addScaledVector(back, this.distance)
-      .add(new THREE.Vector3(0, this.height, 0));
-
-    // Look a bit ahead of the car.
-    const fwd = new THREE.Vector3(Math.sin(heading), 0, Math.cos(heading));
-    this._look
-      .copy(car.position)
-      .addScaledVector(fwd, this.lookAhead)
-      .add(new THREE.Vector3(0, this.car.size.y * 0.6, 0));
-
-    if (!this._initDone) {
-      this.camera.position.copy(this._desired);
-      this._initDone = true;
+    // Ease the trailing ANGLE toward the car's heading (smooth turns), but keep
+    // the distance fixed so speed never changes the framing.
+    if (!this._init) {
+      this.followHeading = this.car.heading;
+      this._init = true;
     } else {
-      // Critically-damped-ish follow.
-      const t = Math.min(1, dt * 5);
-      this.camera.position.lerp(this._desired, t);
+      this.followHeading = dampAngle(
+        this.followHeading,
+        this.car.heading,
+        1 - Math.exp(-this.headingEase * dt)
+      );
     }
+
+    // Position: exactly `distance` behind the trailing heading, at fixed height.
+    const h = this.followHeading;
+    this._pos.set(
+      carPos.x - Math.sin(h) * this.distance,
+      carPos.y + this.height,
+      carPos.z - Math.cos(h) * this.distance
+    );
+    this.camera.position.copy(this._pos);
+
+    // Look slightly ahead of the car using its actual heading.
+    const ch = this.car.heading;
+    this._look.set(
+      carPos.x + Math.sin(ch) * this.lookAhead,
+      carPos.y + this.lookHeight,
+      carPos.z + Math.cos(ch) * this.lookAhead
+    );
     this.camera.lookAt(this._look);
   }
+}
+
+/** Interpolate an angle toward a target along the shortest path. */
+function dampAngle(current, target, t) {
+  let d = target - current;
+  d = Math.atan2(Math.sin(d), Math.cos(d)); // wrap to [-π, π]
+  return current + d * t;
 }
