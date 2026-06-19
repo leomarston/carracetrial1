@@ -18,7 +18,7 @@ export const CARS = {
     targetWidth: 2.77,
     flip: true,
     mass: 800,
-    stats: { speed: 10, acceleration: 9, grip: 7, braking: 9, handling: 6 },
+    stats: { speed: 10, acceleration: 9, grip: 3, braking: 9, handling: 3 },
   },
 };
 
