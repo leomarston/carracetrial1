@@ -7,11 +7,14 @@ const CAR_URL = `${import.meta.env.BASE_URL}models/f1car.glb`;
 
 // Start line: on the highway under the "CRESCENT CITY NORTH" gantry (mesh
 // "Finish_Strut001"), facing down the map's longest straight (~1060 units).
-// The carriageway is ~45 units of asphalt = 4 lanes (~11.25 each). We start in
-// one lane, just right of the double-yellow centre line.
-const ROAD_CENTER_X = 2308; // double-yellow centre of the carriageway
-const LANE_WIDTH = 11.25; // ~45 / 4 lanes
-const CAR_SPAWN = { x: ROAD_CENTER_X + LANE_WIDTH * 0.5, z: 50.5, y: 0.8, heading: -Math.PI };
+// Reading the road markings (yellow edge lines at x≈2285.5 / 2328 and dashed
+// white dividers) shows the lanes are only ~7 units wide. We spawn centered in
+// a single lane so the car sits between two lane lines.
+const LEFT_LINE_X = 2285.5; // left (yellow) lane line of the carriageway
+const LANE_WIDTH = 7.1; // ~7 units between lane lines
+const LANE_INDEX = 3; // 0-based lane from the left edge (a central lane)
+const LANE_CENTER_X = LEFT_LINE_X + LANE_WIDTH * (LANE_INDEX + 0.5);
+const CAR_SPAWN = { x: LANE_CENTER_X, z: 50.5, y: 0.8, heading: -Math.PI };
 
 const overlay = document.getElementById('loading-overlay');
 const progressBar = document.getElementById('progress-bar');
@@ -36,11 +39,11 @@ game
   .then(async (stats) => {
     status.textContent = 'Loading car…';
 
-    // Size the car to fit inside ONE lane (~72% of the lane width). flip=true:
-    // the model's nose points -Z but "forward" is +Z, so we rotate it 180° to
-    // drive nose-first.
+    // Size the car to fit inside ONE ~7-unit lane (~78% of the lane width, so it
+    // sits between the lane lines with margin). flip=true: the model's nose
+    // points -Z but "forward" is +Z, so we rotate it 180° to drive nose-first.
     const car = await game.addCar(CAR_URL, CAR_SPAWN, {
-      targetWidth: LANE_WIDTH * 0.72,
+      targetWidth: LANE_WIDTH * 0.78,
       flip: true,
     });
 

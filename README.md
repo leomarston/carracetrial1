@@ -57,9 +57,10 @@ render exactly as authored.
 
 - **Import & sizing** (`src/game/Car.js`): the F1 model carries a 100× scale
   baked into its Sketchfab root matrix (native world size ~84×46×230). We scale
-  it to a target **width** so it fits inside a single lane (~72% of the ~11-unit
-  lane), recenter it so the wheels sit at `y = 0`, and rotate it 180° so its nose
-  points along the driving direction.
+  it to a target **width** so it fits inside a single lane (~78% of the ~7-unit
+  lane, measured from the road's painted lane markings ≈ 5.5 units), recenter it
+  so the wheels sit at `y = 0`, and rotate it 180° so its nose points along the
+  driving direction.
 - **Start line**: the map's geometry is named, so the start position is derived
   from it: the car spawns centered on the highway under the **"CRESCENT CITY
   NORTH" gantry** (mesh `Finish_Strut001`), facing down the map's longest
