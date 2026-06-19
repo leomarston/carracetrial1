@@ -42,14 +42,14 @@ export class Car {
     this.speed = 0; // signed units/sec along heading
     this.size = new THREE.Vector3(); // world size after scaling
 
-    // Driving tuning (units/sec). Tuned for this map's ~19-unit-wide roads.
-    this.maxSpeed = 600;
-    this.maxReverse = 180;
-    this.accel = 420;
-    this.brakeDecel = 800;
+    // Driving tuning (units/sec). Deliberately calm/slow for controllable racing.
+    this.maxSpeed = 240;
+    this.maxReverse = 90;
+    this.accel = 170;
+    this.brakeDecel = 400;
     this.dragCoeff = 0.7; // passive slow-down per second (fraction)
-    this.rollFriction = 160; // units/sec^2 when coasting
-    this.maxSteer = 1.7; // rad/sec at full effectiveness
+    this.rollFriction = 110; // units/sec^2 when coasting
+    this.maxSteer = 1.6; // rad/sec at full effectiveness
 
     // Collision tuning (set from size once loaded)
     this.rayUp = 200;
@@ -106,7 +106,9 @@ export class Car {
     const L = this.size.z; // length
     const H = this.size.y; // height
     this.rayUp = Math.max(H * 4, 60);
-    this.maxStepUp = H * 0.6; // can climb curbs/ramps, not walls
+    // Can climb curbs/ramps, not walls. Floored so a small car still follows the
+    // road over minor bumps.
+    this.maxStepUp = Math.max(H * 0.6, 1.5);
     return this;
   }
 

@@ -20,9 +20,9 @@ export class ChaseCamera {
     const L = car.size.z || 22;
     const H = car.size.y || 5;
 
-    // Close, fixed rig.
+    // Close, fixed rig. Sits a little higher for a better look down at the car.
     this.distance = L * 1.5; // horizontal trail distance (constant)
-    this.height = H * 1.7; // height above the car
+    this.height = H * 2.6; // height above the car (raised)
     this.lookAhead = L * 0.6; // aim a little ahead of the car
     this.lookHeight = H * 0.8;
     this.headingEase = 6; // how fast the trailing angle catches turns

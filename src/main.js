@@ -39,11 +39,11 @@ game
   .then(async (stats) => {
     status.textContent = 'Loading car…';
 
-    // Size the car to fit inside ONE ~7-unit lane (~78% of the lane width, so it
-    // sits between the lane lines with margin). flip=true: the model's nose
-    // points -Z but "forward" is +Z, so we rotate it 180° to drive nose-first.
+    // Size the car to ~39% of a ~7-unit lane (half the previous size), so it sits
+    // comfortably inside one lane. flip=true: the model's nose points -Z but
+    // "forward" is +Z, so we rotate it 180° to drive nose-first.
     const car = await game.addCar(CAR_URL, CAR_SPAWN, {
-      targetWidth: LANE_WIDTH * 0.78,
+      targetWidth: LANE_WIDTH * 0.39,
       flip: true,
     });
 
