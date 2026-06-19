@@ -21,11 +21,14 @@ export class Car {
   /**
    * @param {THREE.Object3D[]} collidables  meshes to drive on (the map).
    * @param {object} [opts]
+   * @param {number} [opts.targetWidth] desired car width in world units (preferred:
+   *   sized to the road). Falls back to targetLength when omitted.
    * @param {number} [opts.targetLength=80] desired car length in world units.
    * @param {boolean} [opts.flip=false] rotate model 180° if its nose points -Z.
    */
   constructor(collidables, opts = {}) {
     this.collidables = collidables;
+    this.targetWidth = opts.targetWidth ?? null;
     this.targetLength = opts.targetLength ?? 80;
     this.flip = opts.flip ?? false;
 
@@ -39,14 +42,14 @@ export class Car {
     this.speed = 0; // signed units/sec along heading
     this.size = new THREE.Vector3(); // world size after scaling
 
-    // Tuning (set from size once loaded)
-    this.maxSpeed = 1500;
-    this.maxReverse = 500;
-    this.accel = 900;
-    this.brakeDecel = 1600;
-    this.dragCoeff = 0.6; // passive slow-down per second (fraction)
-    this.rollFriction = 220; // units/sec^2 when coasting
-    this.maxSteer = 1.6; // rad/sec at full effectiveness
+    // Driving tuning (units/sec). Tuned for this map's ~19-unit-wide roads.
+    this.maxSpeed = 600;
+    this.maxReverse = 180;
+    this.accel = 420;
+    this.brakeDecel = 800;
+    this.dragCoeff = 0.7; // passive slow-down per second (fraction)
+    this.rollFriction = 160; // units/sec^2 when coasting
+    this.maxSteer = 1.7; // rad/sec at full effectiveness
 
     // Collision tuning (set from size once loaded)
     this.rayUp = 200;
@@ -66,13 +69,15 @@ export class Car {
     const model = gltf.scene;
 
     // Measure native size (the Sketchfab matrix already baked in its 100x scale).
+    // native.x = width, native.y = height, native.z = length.
     model.updateWorldMatrix(true, true);
     let box = new THREE.Box3().setFromObject(model);
     const native = box.getSize(new THREE.Vector3());
 
-    // Scale uniformly so the longest (Z) axis == targetLength.
-    const nativeLength = Math.max(native.x, native.y, native.z);
-    const scale = this.targetLength / nativeLength;
+    // Prefer sizing by width (the road is the constraint); else by longest axis.
+    const scale = this.targetWidth
+      ? this.targetWidth / native.x
+      : this.targetLength / Math.max(native.x, native.y, native.z);
     model.scale.setScalar(scale);
 
     if (this.flip) model.rotateY(Math.PI);
@@ -105,13 +110,27 @@ export class Car {
     return this;
   }
 
-  /** Place the car at (x,z); its height is snapped to the map surface. */
-  placeAt(x, z, headingRad = 0) {
+  /**
+   * Place the car at (x,z); its height is snapped to the map surface.
+   * If expectedY is given (e.g. the analysed road height), the surface nearest
+   * that height is chosen — robust when a gantry/bridge sits above the spawn.
+   */
+  placeAt(x, z, headingRad = 0, expectedY = null) {
     this.heading = headingRad;
-    const g = this._sampleGround(x, z);
-    const y = g ? g.y : 0;
+    const originY = (expectedY ?? this.object3D.position.y) + 2000;
+    this._ray.set(this._tmp.set(x, originY, z), this._down);
+    this._ray.far = 6000;
+    const hits = this._ray.intersectObjects(this.collidables, false);
+    let chosen = null;
+    if (hits.length) {
+      chosen = expectedY != null
+        ? hits.reduce((a, b) =>
+            Math.abs(b.point.y - expectedY) < Math.abs(a.point.y - expectedY) ? b : a)
+        : hits[0];
+    }
+    const y = chosen ? chosen.point.y : (expectedY ?? 0);
     this.object3D.position.set(x, y, z);
-    if (g) this.groundNormal.copy(g.normal);
+    if (chosen) this.groundNormal.copy(this._normalOf(chosen));
     this._applyOrientation(1);
   }
 
@@ -156,15 +175,15 @@ export class Car {
     const nz = cur.z + fwd.z * this.speed * dt;
 
     // --- Collision vs. map: sample ground at the target position ---
-    const g = this._sampleGround(nx, nz);
+    const g = this._sampleGround(nx, nz, cur.y);
     if (!g) {
       // Edge of the world / hole — stop here.
       this.speed = 0;
       this._applyOrientation(dt);
       return;
     }
-    if (g.y - cur.y > this.maxStepUp) {
-      // Wall / building side — block forward motion, kill speed.
+    if (g.tooHigh) {
+      // Wall / curb / building side too high to climb — block, bounce back.
       this.speed *= -0.1;
       this._applyOrientation(dt);
       return;
@@ -175,17 +194,32 @@ export class Car {
     this._applyOrientation(dt);
   }
 
-  /** Raycast down onto the map; returns {y, normal} or null. */
-  _sampleGround(x, z) {
-    this._ray.set(this._tmp.set(x, this.object3D.position.y + this.rayUp, z), this._down);
-    this._ray.far = this.rayUp * 3;
+  /**
+   * Find the surface the car should rest on at (x,z). Casts straight down from
+   * high above and returns the highest hit no more than `maxStepUp` above
+   * `refY`, so overhead structures (the start gantry, tunnel ceilings, bridges
+   * overhead) are ignored while still following the road up curbs/ramps.
+   *   - {y, normal} : a drivable surface
+   *   - {tooHigh:true} : only walls/curbs too high to climb here
+   *   - null : nothing below at all (edge of the world)
+   */
+  _sampleGround(x, z, refY = this.object3D.position.y) {
+    this._ray.set(this._tmp.set(x, refY + 2000, z), this._down);
+    this._ray.far = 4000;
     const hits = this._ray.intersectObjects(this.collidables, false);
     if (!hits.length) return null;
-    const h = hits[0];
-    const normal = h.face
-      ? h.face.normal.clone().transformDirection(h.object.matrixWorld).normalize()
+    const ceil = refY + this.maxStepUp;
+    // hits are ordered nearest-first (top-down, descending y)
+    for (const h of hits) {
+      if (h.point.y <= ceil) return { y: h.point.y, normal: this._normalOf(h) };
+    }
+    return { tooHigh: true };
+  }
+
+  _normalOf(hit) {
+    return hit.face
+      ? hit.face.normal.clone().transformDirection(hit.object.matrixWorld).normalize()
       : new THREE.Vector3(0, 1, 0);
-    return { y: h.point.y, normal };
   }
 
   /** Yaw to heading + smoothly tilt the car onto the ground normal. */

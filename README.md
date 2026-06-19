@@ -55,16 +55,22 @@ render exactly as authored.
 
 ## How the car works
 
-- **Import** (`src/game/Car.js`): the F1 model carries a 100× scale baked into
-  its Sketchfab root matrix, so its native world size is ~84×46×230. We scale it
-  uniformly to a target length (80 units), recenter it so the wheels sit at
-  `y = 0`, and rotate it 180° so its nose points along the driving direction.
+- **Import & sizing** (`src/game/Car.js`): the F1 model carries a 100× scale
+  baked into its Sketchfab root matrix (native world size ~84×46×230). We scale
+  it to a target **width** (~29% of the road, since the road — not the car — is
+  the constraint), recenter it so the wheels sit at `y = 0`, and rotate it 180°
+  so its nose points along the driving direction.
+- **Start line**: the map's geometry is named, so the start position is derived
+  from it: the car spawns centered on the highway under the **"CRESCENT CITY
+  NORTH" gantry** (mesh `Finish_Strut001`), facing down the map's longest
+  straight (~1060 units). The road there is ~45 units of asphalt wide.
 - **Collision with the map**: each frame the car raycasts straight down onto the
-  map's meshes to find the surface, then snaps its height to that surface and
-  tilts to the surface normal. Before moving it samples the ground at the
-  *target* position: if there's no surface (edge of the world) or it rises more
-  than the car can step over (a wall / building side), the move is blocked. This
-  is real collision against the actual map geometry, not a flat ground plane.
+  map's meshes and rests on the highest surface no more than a small step above
+  it — so **overhead structures (the start gantry, tunnel ceilings, bridges) are
+  ignored** while curbs/ramps are followed. Before moving it samples the ground
+  at the *target* position: no surface (edge of the world) or only walls too
+  high to climb → the move is blocked. Real collision against the actual map
+  geometry, not a flat ground plane.
 - **Driving** (arcade): throttle accelerates along the heading, steering rotates
   the heading (more effective the faster you go), with drag, rolling friction
   and braking/reverse. A chase camera (`src/game/ChaseCamera.js`) trails behind.

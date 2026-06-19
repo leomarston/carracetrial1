@@ -5,8 +5,12 @@ import { Game } from './game/Game.js';
 const MAP_URL = `${import.meta.env.BASE_URL}models/carracemap1.glb`;
 const CAR_URL = `${import.meta.env.BASE_URL}models/f1car.glb`;
 
-// Spawn on the large flat area found by the surface analysis (verified driveable).
-const CAR_SPAWN = { x: -1856, z: 563, heading: Math.PI / 2 };
+// Start line: centered on the highway under the "CRESCENT CITY NORTH" gantry
+// (mesh "Finish_Strut001"), facing down the map's longest straight (~1060 units).
+// Found by analysing the map's Road2 + Finish_Strut geometry; the full asphalt
+// carriageway there is ~45 units wide.
+const ROAD_WIDTH = 45;
+const CAR_SPAWN = { x: 2308, z: 50.5, y: 0.8, heading: -Math.PI };
 
 const overlay = document.getElementById('loading-overlay');
 const progressBar = document.getElementById('progress-bar');
@@ -31,9 +35,13 @@ game
   .then(async (stats) => {
     status.textContent = 'Loading car…';
 
-    // flip=true: the model's nose points -Z, but our "forward" is +Z, so we
-    // rotate it 180° to make the car drive nose-first.
-    const car = await game.addCar(CAR_URL, CAR_SPAWN, { targetLength: 80, flip: true });
+    // Size the car to the road: ~29% of the carriageway width, so it sits in a
+    // lane with room to overtake. flip=true: the model's nose points -Z but
+    // "forward" is +Z, so we rotate it 180° to drive nose-first.
+    const car = await game.addCar(CAR_URL, CAR_SPAWN, {
+      targetWidth: ROAD_WIDTH * 0.29,
+      flip: true,
+    });
 
     progressBar.style.width = '100%';
     overlay.classList.add('hidden');

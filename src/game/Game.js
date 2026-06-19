@@ -113,7 +113,7 @@ export class Game {
   async addCar(url, spawn, opts = {}) {
     const car = new Car(this.mapMeshes ?? [], opts);
     await car.load(url);
-    car.placeAt(spawn.x, spawn.z, spawn.heading ?? 0);
+    car.placeAt(spawn.x, spawn.z, spawn.heading ?? 0, spawn.y ?? null);
     this.scene.add(car.object3D);
 
     this.car = car;
