@@ -11,7 +11,7 @@ import * as THREE from 'three';
 export class ChaseCamera {
   /**
    * @param {THREE.Camera} camera
-   * @param {import('./Car.js').Car} car
+   * @param {import('./Vehicle.js').Vehicle} car
    */
   constructor(camera, car) {
     this.camera = camera;

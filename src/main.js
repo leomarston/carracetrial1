@@ -1,18 +1,15 @@
+import RAPIER from '@dimforge/rapier3d-compat';
 import { Game } from './game/Game.js';
 
 // Assets live in /public so they are served verbatim (never bundled/transformed).
-// BASE_URL keeps the paths correct under any deploy sub-path.
 const MAP_URL = `${import.meta.env.BASE_URL}models/carracemap1.glb`;
 const CAR_URL = `${import.meta.env.BASE_URL}models/f1car.glb`;
 
-// Start line: on the highway under the "CRESCENT CITY NORTH" gantry (mesh
-// "Finish_Strut001"), facing down the map's longest straight (~1060 units).
-// Reading the road markings (yellow edge lines at x≈2285.5 / 2328 and dashed
-// white dividers) shows the lanes are only ~7 units wide. We spawn centered in
-// a single lane so the car sits between two lane lines.
-const LEFT_LINE_X = 2285.5; // left (yellow) lane line of the carriageway
-const LANE_WIDTH = 7.1; // ~7 units between lane lines
-const LANE_INDEX = 3; // 0-based lane from the left edge (a central lane)
+// Start line: on the highway under the "CRESCENT CITY NORTH" gantry, facing down
+// the map's longest straight. Lanes are ~7 units wide; spawn centred in a lane.
+const LEFT_LINE_X = 2285.5;
+const LANE_WIDTH = 7.1;
+const LANE_INDEX = 3; // a central lane
 const LANE_CENTER_X = LEFT_LINE_X + LANE_WIDTH * (LANE_INDEX + 0.5);
 const CAR_SPAWN = { x: LANE_CENTER_X, z: 50.5, y: 0.8, heading: -Math.PI };
 
@@ -24,55 +21,54 @@ const mapStatsEl = document.getElementById('map-stats');
 const speedEl = document.getElementById('speedo');
 const speedoWrap = document.getElementById('speedo-wrap');
 
-const game = new Game(document.getElementById('app'));
-game.start();
+async function boot() {
+  status.textContent = 'Initialising physics…';
+  await RAPIER.init(); // load the Rapier WASM once, before any physics is created
 
-game
-  .loadMap(MAP_URL, (pct, loaded, total) => {
+  const game = new Game(document.getElementById('app'));
+  game.start();
+
+  const stats = await game.loadMap(MAP_URL, (pct, loaded, total) => {
     if (total > 0) {
       progressBar.style.width = `${pct.toFixed(0)}%`;
       status.textContent = `Loading map… ${(loaded / 1e6).toFixed(1)} / ${(total / 1e6).toFixed(1)} MB`;
     } else {
       status.textContent = `Loading map… ${(loaded / 1e6).toFixed(1)} MB`;
     }
-  })
-  .then(async (stats) => {
-    status.textContent = 'Loading car…';
-
-    // Size the car to ~39% of a ~7-unit lane (half the previous size), so it sits
-    // comfortably inside one lane. flip=true: the model's nose points -Z but
-    // "forward" is +Z, so we rotate it 180° to drive nose-first.
-    const car = await game.addCar(CAR_URL, CAR_SPAWN, {
-      targetWidth: LANE_WIDTH * 0.39,
-      flip: true,
-    });
-
-    progressBar.style.width = '100%';
-    overlay.classList.add('hidden');
-    hud.classList.remove('hidden');
-    speedoWrap.classList.remove('hidden');
-
-    const { size } = stats.bounds;
-    mapStatsEl.innerHTML = [
-      `<strong>${stats.title}</strong>`,
-      `Car: F1 (${car.size.x.toFixed(0)}×${car.size.y.toFixed(0)}×${car.size.z.toFixed(0)})`,
-      `<b>W/A/S/D or arrows</b> to drive · <b>C</b> = free camera`,
-    ].join('<br/>');
-
-    // Live speedometer.
-    const updateSpeedo = () => {
-      if (speedEl && game.car) {
-        speedEl.textContent = `${Math.abs(game.car.speed).toFixed(0)} u/s`;
-      }
-      requestAnimationFrame(updateSpeedo);
-    };
-    updateSpeedo();
-
-    window.__game = game;
-    console.info('[carrace] Map + car imported. Driving enabled.', { map: stats, carSize: car.size });
-  })
-  .catch((err) => {
-    console.error(err);
-    status.textContent = '⚠️ Failed to load. See console for details.';
-    progressBar.style.background = '#ff3b30';
   });
+
+  status.textContent = 'Loading car…';
+  const car = await game.addCar(CAR_URL, CAR_SPAWN, {
+    targetWidth: LANE_WIDTH * 0.39, // ~one-lane-wide
+    flip: true,
+  });
+
+  progressBar.style.width = '100%';
+  overlay.classList.add('hidden');
+  hud.classList.remove('hidden');
+  speedoWrap.classList.remove('hidden');
+
+  mapStatsEl.innerHTML = [
+    `<strong>${stats.title}</strong>`,
+    `Car: F1 (${car.size.x.toFixed(1)}×${car.size.y.toFixed(1)}×${car.size.z.toFixed(1)} m)`,
+    `<b>W/A/S/D</b> drive · <b>Space</b> handbrake · <b>R</b> reset · <b>C</b> free cam`,
+  ].join('<br/>');
+
+  // Live speedometer (m/s -> km/h).
+  const updateSpeedo = () => {
+    if (speedEl && game.car) {
+      speedEl.textContent = `${Math.abs(game.car.speed * 3.6).toFixed(0)} km/h`;
+    }
+    requestAnimationFrame(updateSpeedo);
+  };
+  updateSpeedo();
+
+  window.__game = game;
+  console.info('[carrace] Physics vehicle ready.', { carSize: car.size });
+}
+
+boot().catch((err) => {
+  console.error(err);
+  status.textContent = '⚠️ Failed to load. See console for details.';
+  progressBar.style.background = '#ff3b30';
+});

@@ -1,23 +1,23 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { loadMap } from './MapLoader.js';
-import { Car } from './Car.js';
+import { Vehicle } from './Vehicle.js';
 import { Controls } from './Controls.js';
 import { ChaseCamera } from './ChaseCamera.js';
+import { PhysicsWorld, buildTrimeshFromMeshes } from '../physics/PhysicsWorld.js';
 
 /**
- * Core game shell: renderer, scene, camera, lights and the render loop.
- *
- * Stage 1 goal: load the highway-battle map and let you inspect it (orbit /
- * pan / zoom) to confirm it imported 100% correctly. The class is structured
- * so cars, physics and gameplay can be added later via `add()` and the public
- * `scene` / `camera` references.
+ * Core game shell: renderer, scene, camera, lights, the Rapier physics world
+ * and the render loop. The map becomes a static collider and the car is a
+ * Rapier raycast vehicle driven in a fixed-timestep loop.
  */
 export class Game {
   constructor(container) {
     this.container = container;
     this.timer = new THREE.Timer();
-    this.updateables = []; // objects with an update(dt) method (cars, etc. later)
+    this.updateables = []; // objects with an update(dt) method
+    this.physics = new PhysicsWorld({ gravity: -20 });
+    this.debugPhysics = false;
 
     this._initRenderer();
     this._initScene();
@@ -95,9 +95,12 @@ export class Game {
     this.mapStats = stats;
     this.scene.add(root);
 
-    // Cache the map's meshes so the car can raycast collisions against them.
+    // Cache the map's meshes, then bake them into one static physics collider
+    // so the car collides with the road, terrain, buildings and barriers.
     this.mapMeshes = [];
     root.traverse((o) => { if (o.isMesh) this.mapMeshes.push(o); });
+    const { vertices, indices } = buildTrimeshFromMeshes(this.mapMeshes);
+    this.physics.addStaticTrimesh(vertices, indices);
 
     this._frameCameraTo(stats.bounds);
     this._configureLightsToBounds(stats.bounds);
@@ -105,15 +108,14 @@ export class Game {
   }
 
   /**
-   * Load the player car, drop it onto the map and switch to a chase camera.
+   * Load the player car as a physics vehicle and switch to a chase camera.
    * @param {string} url
-   * @param {{x:number, z:number, heading?:number}} spawn
-   * @param {object} [opts] forwarded to Car (targetLength, flip).
+   * @param {{x:number, z:number, y?:number, heading?:number}} spawn
+   * @param {object} [opts] forwarded to Vehicle (targetWidth, flip).
    */
   async addCar(url, spawn, opts = {}) {
-    const car = new Car(this.mapMeshes ?? [], opts);
-    await car.load(url);
-    car.placeAt(spawn.x, spawn.z, spawn.heading ?? 0, spawn.y ?? null);
+    const car = new Vehicle(this.physics, opts);
+    await car.load(url, spawn);
     this.scene.add(car.object3D);
 
     this.car = car;
@@ -121,9 +123,11 @@ export class Game {
     this.chaseCam = new ChaseCamera(this.camera, car);
     this.setDriving(true);
 
-    // 'C' toggles between driving (chase cam) and free-orbit inspection.
     window.addEventListener('keydown', (e) => {
-      if (e.key.toLowerCase() === 'c') this.setDriving(!this.driving);
+      const k = e.key.toLowerCase();
+      if (k === 'c') this.setDriving(!this.driving);
+      if (k === 'r' && this.car) this.car.resetTo(spawn.x, spawn.y ?? 0, spawn.z, spawn.heading ?? 0);
+      if (k === 'p') { this.debugPhysics = !this.debugPhysics; this.physics.setDebug(this.scene, this.debugPhysics); }
     });
     return car;
   }
@@ -132,7 +136,6 @@ export class Game {
     this.driving = on;
     this.controls.enabled = !on;
     if (!on && this.car) {
-      // Hand the orbit camera a sensible target on the car.
       this.controls.target.copy(this.car.object3D.position);
       this.controls.update();
     }
@@ -188,17 +191,23 @@ export class Game {
     this.timer.update();
     const dt = this.timer.getDelta();
 
-    if (this.car && this.driving) {
-      this.car.update(dt, {
+    if (this.car) {
+      // Feed current input, advance physics in fixed steps, then sync visuals.
+      this.car.setInput({
         throttle: this.input.throttle,
         steer: this.input.steer,
         handbrake: this.input.handbrake,
       });
-      this.chaseCam.update(dt);
+      this.physics.step(dt, (h) => this.car.fixedUpdate(h));
+      this.car.syncVisual();
+
+      if (this.driving) this.chaseCam.update(dt);
+      else if (this.controls.enabled) this.controls.update();
     } else if (this.controls.enabled) {
       this.controls.update();
     }
 
+    if (this.debugPhysics) this.physics.updateDebug();
     for (const e of this.updateables) e.update(dt);
     this.renderer.render(this.scene, this.camera);
   }

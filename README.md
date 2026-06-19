@@ -1,13 +1,16 @@
 # Car Race — Highway Battle 🏁
 
-A 3D car racing game built with [Three.js](https://threejs.org/) and bundled
-with [Vite](https://vitejs.dev/).
+A 3D car racing game built with [Three.js](https://threejs.org/), the
+[Rapier](https://rapier.rs/) physics engine, and [Vite](https://vitejs.dev/).
 
 ## Status
 
 - **Stage 1 — Map import (done).** The highway-battle map is imported and rendered.
-- **Stage 2 — Drivable car (done).** An F1 car is imported, collides with the
-  map surface, and is drivable with the keyboard.
+- **Stage 2 — Drivable car (done).** An F1 car is imported and drivable.
+- **Stage 3 — Real driving physics (in progress).** The car is now a Rapier
+  raycast vehicle: a dynamic chassis with four suspension wheels, grip/slip,
+  weight transfer and real collisions. Next: drivetrain/RPM, audio, dynamic
+  camera, skid marks & smoke (the "feel" pass).
 
 ## Getting started
 
@@ -27,7 +30,9 @@ Then open the printed URL (default http://localhost:5173) in a browser.
 | `A` / `←`           | Steer left        |
 | `D` / `→`           | Steer right       |
 | `Space`             | Handbrake         |
+| `R`                 | Reset car to the start line |
 | `C`                 | Toggle free-orbit camera (inspect) |
+| `P`                 | Toggle physics-collider debug view |
 
 ### Other commands
 
@@ -53,33 +58,29 @@ assets' transforms or material colors; Three.js' `GLTFLoader` already applies
 the Sketchfab Z-up→Y-up root matrix and correct texture color spaces, so they
 render exactly as authored.
 
-## How the car works
+## How it works
 
-- **Import & sizing** (`src/game/Car.js`): the F1 model carries a 100× scale
-  baked into its Sketchfab root matrix (native world size ~84×46×230). We scale
-  it to a target **width** so it sits comfortably inside a single lane (~39% of
-  the ~7-unit lane ≈ 2.8 units, measured from the road's painted markings),
-  recenter it so the wheels sit at `y = 0`, and rotate it 180° so its nose points
-  along the driving direction. Driving is deliberately slow/calm
-  (`maxSpeed ≈ 240`) for controllable racing.
-- **Start line**: the map's geometry is named, so the start position is derived
-  from it: the car spawns centered on the highway under the **"CRESCENT CITY
-  NORTH" gantry** (mesh `Finish_Strut001`), facing down the map's longest
-  straight (~1060 units). The road there is ~45 units of asphalt wide.
-- **Collision with the map**: each frame the car raycasts straight down onto the
-  map's meshes and rests on the highest surface no more than a small step above
-  it — so **overhead structures (the start gantry, tunnel ceilings, bridges) are
-  ignored** while curbs/ramps are followed. Before moving it samples the ground
-  at the *target* position: no surface (edge of the world) or only walls too
-  high to climb → the move is blocked. Real collision against the actual map
-  geometry, not a flat ground plane.
-- **Driving** (arcade): throttle accelerates along the heading, steering rotates
-  the heading (more effective the faster you go), with drag, rolling friction
-  and braking/reverse.
-- **Chase camera** (`src/game/ChaseCamera.js`): a close third-person camera with
-  a **fixed follow distance** — it sits exactly the same distance behind the car
-  at any speed (no spring/lag on the distance). Only the trailing angle eases, so
-  turns stay smooth while the framing never changes as you accelerate.
+Units are **metres / kilograms / Newtons** (1 world unit = 1 m; the lane-fitted
+car is ~2.8 m wide, realistic for an F1).
+
+- **Physics world** (`src/physics/PhysicsWorld.js`): a Rapier world stepped on a
+  **fixed 1/60 s timestep** (accumulator) decoupled from rendering — essential
+  for stable vehicle dynamics. The whole map (594 meshes) is baked into one
+  static **trimesh collider**, so the car collides with the road, terrain,
+  buildings and barriers.
+- **Vehicle** (`src/game/Vehicle.js`): a dynamic **chassis rigid body**
+  (~850 kg, CCD on so it can't tunnel through walls) driven by Rapier's
+  `DynamicRayCastVehicleController` with **four raycast wheels**. Each wheel has
+  a suspension spring/damper (ride height, dive, squat, body roll), grip via
+  friction-slip, and steering/engine/brake forces. Rear-wheel drive, front
+  braking bias, speed-sensitive steering, reverse and handbrake.
+- **Import & sizing**: the F1 model (100× Sketchfab scale baked in) is scaled to
+  a **one-lane width** (~2.8 m), recentred so the chassis origin is its centre,
+  and rotated 180° so its nose leads.
+- **Start line**: spawns centred in a lane under the **"CRESCENT CITY NORTH"
+  gantry** (mesh `Finish_Strut001`), facing the map's longest straight.
+- **Chase camera** (`src/game/ChaseCamera.js`): close, with a **fixed follow
+  distance** (no lag when accelerating); only the trailing angle eases on turns.
 
 ### Attribution (required, CC-BY-4.0)
 
