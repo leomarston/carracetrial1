@@ -168,6 +168,68 @@ body {
   transition: width 0.06s linear;
 }
 
+/* ---- Car stats panel ---- */
+#car-stats {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  z-index: 10;
+  width: 210px;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 10px 12px;
+  border-radius: 10px;
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: opacity 0.4s ease;
+}
+
+#car-stats.hidden {
+  opacity: 0;
+}
+
+#car-stats .car-name {
+  font-weight: 800;
+  font-size: 0.95rem;
+  margin-bottom: 8px;
+  color: var(--accent);
+  letter-spacing: 0.04em;
+}
+
+#car-stats .stat {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 4px 0;
+  font-size: 0.66rem;
+}
+
+#car-stats .stat-lbl {
+  flex: 0 0 92px;
+  opacity: 0.8;
+}
+
+#car-stats .stat-bar {
+  flex: 1;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+#car-stats .stat-bar > span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #46d36a, #f0c020 75%, #ff3b30);
+  border-radius: 999px;
+}
+
+#car-stats .stat-val {
+  flex: 0 0 14px;
+  text-align: right;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
 /* ---- Attribution (CC-BY-4.0 requirement) ---- */
 #attribution {
   position: fixed;

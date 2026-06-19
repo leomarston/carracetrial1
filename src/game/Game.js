@@ -121,13 +121,12 @@ export class Game {
 
   /**
    * Load the player car as a physics vehicle and switch to a chase camera.
-   * @param {string} url
+   * @param {object} carConfig  entry from cars.js (with a resolved `url`)
    * @param {{x:number, z:number, y?:number, heading?:number}} spawn
-   * @param {object} [opts] forwarded to Vehicle (targetWidth, flip).
    */
-  async addCar(url, spawn, opts = {}) {
-    const car = new Vehicle(this.physics, opts);
-    await car.load(url, spawn);
+  async addCar(carConfig, spawn) {
+    const car = new Vehicle(this.physics, carConfig);
+    await car.load(carConfig.url, spawn);
     this.scene.add(car.object3D);
 
     this.car = car;

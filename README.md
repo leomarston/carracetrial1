@@ -11,9 +11,13 @@ A 3D car racing game built with [Three.js](https://threejs.org/), the
   raycast vehicle: a dynamic chassis with four suspension wheels, grip/slip,
   weight transfer and real collisions. **Feel pass:** spinning/steering wheels,
   brake lights, RPM/gear model, dynamic chase camera (speed-FOV, shake,
-  look-into-corner), tyre **skid marks & smoke**, and procedural **audio**
-  (engine, tyre screech, wind). Next: tuning + per-surface grip, then race
-  structure (laps/checkpoints).
+  look-into-corner), tyre **skid marks & smoke**, procedural **audio**, and
+  **invisible road-edge walls** that keep you on the track.
+- **Cars & stats.** Each car is defined in `src/game/cars.js` by ratings out of
+  10 (Speed, Acceleration, Grip / *yol tutuşu*, Braking, Handling) that directly
+  drive the physics — so new cars are just a new entry + model, and the ratings
+  show in the HUD. The F1 is fast (top speed ~340 km/h) and deliberately
+  demanding: strong RWD power oversteer and twitchy high-speed steering.
 
 ## Getting started
 

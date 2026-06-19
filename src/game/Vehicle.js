@@ -1,6 +1,7 @@
 import RAPIER from '@dimforge/rapier3d-compat';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { statsToTuning, gearTopSpeeds } from './cars.js';
 
 /**
  * Physics-driven car built on Rapier's DynamicRayCastVehicleController
@@ -12,13 +13,17 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 export class Vehicle {
   /**
    * @param {import('../physics/PhysicsWorld.js').PhysicsWorld} physics
-   * @param {object} [opts] { targetWidth, flip }
+   * @param {object} carConfig  entry from cars.js (url, targetWidth, flip, mass, stats)
    */
-  constructor(physics, opts = {}) {
+  constructor(physics, carConfig = {}) {
     this.physics = physics;
     this.world = physics.world;
-    this.targetWidth = opts.targetWidth ?? 2.8;
-    this.flip = opts.flip ?? false;
+    this.config = carConfig;
+    this.name = carConfig.name ?? 'Car';
+    this.stats = carConfig.stats ?? { speed: 6, acceleration: 6, grip: 6, braking: 6, handling: 6 };
+    this.targetWidth = carConfig.targetWidth ?? 2.8;
+    this.flip = carConfig.flip ?? false;
+    this.mass = carConfig.mass ?? 850;
 
     // Visual root, synced from the chassis each frame (origin = chassis centre).
     this.object3D = new THREE.Group();
@@ -32,25 +37,25 @@ export class Vehicle {
     this.input = { throttle: 0, steer: 0, handbrake: false };
     this._steerAngle = 0; // smoothed current steering angle (rad)
 
-    // --- Tuning (simcade) ---
-    this.mass = 850; // kg
-    this.maxEngineForce = 9000; // N (total, split across driven wheels)
-    this.maxBrakeForce = 5000;
-    this.maxSteerAngle = 0.5; // rad (~29°) at low speed
-    this.steerSpeed = 4.0; // how fast steering eases to target
-    this.topSpeed = 75; // m/s soft cap (~270 km/h) via engine-force falloff
-    this.drivenWheels = 'rear'; // 'rear' | 'all'
+    // --- Physics tuning derived from the car's 0–10 ratings ---
+    const t = statsToTuning(this.stats);
+    this.maxEngineForce = t.maxEngineForce;
+    this.maxBrakeForce = t.maxBrakeForce;
+    this.topSpeed = t.topSpeed; // m/s soft cap via engine-force falloff
+    this.steerSpeed = t.steerSpeed;
+    this.angularDamping = t.angularDamping;
+    this.maxSteerAngle = 0.55; // rad lock at low speed
+    this.drivenWheels = 'rear'; // RWD → power oversteer
 
-    // Suspension / tyre (set per wheel in _addWheels)
     this.suspension = {
-      stiffness: 36,
+      stiffness: 34,
       compression: 1.8,
       relaxation: 2.6,
-      restLength: 0.0, // set from geometry
-      maxTravel: 0.0, // set from geometry
+      restLength: 0.0,
+      maxTravel: 0.0,
       maxForce: 30000,
-      frictionSlip: 2.2, // grip; higher = more
-      sideFriction: 1.0,
+      frictionSlip: t.frictionSlip, // grip; higher = more traction
+      sideFriction: t.sideFriction,
     };
 
     this._tmpV = new THREE.Vector3();
@@ -65,7 +70,7 @@ export class Vehicle {
     this.steer = 0; // current visual steering angle (rad)
     this.braking = false;
     this.wheelsInContact = 0;
-    this.engine = { idle: 1100, redline: 7800, gearTopKmh: [55, 95, 140, 185, 235, 290] };
+    this.engine = { idle: 1200, redline: 8200, gearTopKmh: gearTopSpeeds(this.topSpeed) };
 
     // Wheel + light animation state
     this._spinAngle = 0;
@@ -170,8 +175,8 @@ export class Vehicle {
     const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
       .setTranslation(spawn.x, startY, spawn.z)
       .setRotation({ x: q.x, y: q.y, z: q.z, w: q.w })
-      .setLinearDamping(0.1)
-      .setAngularDamping(0.6)
+      .setLinearDamping(0.04) // low drag → high top speed
+      .setAngularDamping(this.angularDamping)
       .setCcdEnabled(true) // don't tunnel through walls at speed
       .setCanSleep(false);
     this.chassis = this.world.createRigidBody(bodyDesc);
@@ -234,9 +239,11 @@ export class Vehicle {
   fixedUpdate(h) {
     if (!this.controller) return;
     const fwdSpeed = this._forwardSpeed();
+    const speedMs = Math.abs(fwdSpeed);
 
-    // --- Steering: ease toward target, less lock at speed ---
-    const speedFactor = 1 - Math.min(0.7, Math.abs(fwdSpeed) / this.topSpeed);
+    // --- Steering: ease toward target, with only mild high-speed assist so the
+    //     car stays demanding (twitchy) at speed but is still maneuverable slow. ---
+    const speedFactor = Math.max(0.32, 1 - speedMs / (this.topSpeed * 1.25));
     const target = this.input.steer * this.maxSteerAngle * speedFactor;
     this._steerAngle += (target - this._steerAngle) * Math.min(1, this.steerSpeed * h);
 
@@ -245,24 +252,26 @@ export class Vehicle {
     let engineForce = 0;
     let brake = 0;
     if (throttle > 0) {
-      // engine force tapers to 0 near top speed
-      const taper = Math.max(0, 1 - Math.max(0, fwdSpeed) / this.topSpeed);
-      engineForce = throttle * this.maxEngineForce * taper;
+      engineForce = throttle * this.maxEngineForce * Math.max(0, 1 - Math.max(0, fwdSpeed) / this.topSpeed);
     } else if (throttle < 0) {
       if (fwdSpeed > 0.5) brake = this.maxBrakeForce; // braking
-      else engineForce = throttle * this.maxEngineForce * 0.5; // reverse (slower)
+      else engineForce = throttle * this.maxEngineForce * 0.45 * Math.max(0, 1 - speedMs / (this.topSpeed * 0.4)); // reverse
     }
     if (this.input.handbrake) brake = Math.max(brake, this.maxBrakeForce * 1.2);
+
+    // Power oversteer: hard throttle (esp. at lower speed) breaks rear traction.
+    const powerSlip = throttle > 0.55 && speedMs < this.topSpeed * 0.45
+      ? (throttle - 0.55) * (1 - speedMs / (this.topSpeed * 0.45))
+      : 0;
+    const rearGrip = this.suspension.frictionSlip * (1 - 0.45 * Math.min(1, powerSlip));
 
     const driveAll = this.drivenWheels === 'all';
     for (let i = 0; i < this.wheels.length; i++) {
       const w = this.wheels[i];
-      // steering on front wheels
       this.controller.setWheelSteering(i, w.isFront ? this._steerAngle : 0);
-      // engine on driven wheels
       const driven = driveAll || !w.isFront;
       this.controller.setWheelEngineForce(i, driven ? engineForce / (driveAll ? 4 : 2) : 0);
-      // brakes: front-biased; handbrake mostly rear
+      if (!w.isFront) this.controller.setWheelFrictionSlip(i, rearGrip);
       let b = brake * (w.isFront ? 0.6 : 0.4);
       if (this.input.handbrake) b = w.isFront ? 0 : this.maxBrakeForce;
       this.controller.setWheelBrake(i, b);
@@ -270,8 +279,7 @@ export class Vehicle {
 
     // Feel flags for lights / effects / audio.
     this.braking = throttle < 0 || this.input.handbrake;
-    const spinning = throttle > 0.5 && Math.abs(fwdSpeed) < 3 ? 1 - Math.abs(fwdSpeed) / 3 : 0;
-    this.wheelSlip = this.input.handbrake ? 1 : Math.max(0, spinning);
+    this.wheelSlip = this.input.handbrake ? 1 : Math.min(1, powerSlip);
 
     this.controller.updateVehicle(h);
   }
