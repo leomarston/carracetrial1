@@ -5,9 +5,9 @@ with [Vite](https://vitejs.dev/).
 
 ## Status
 
-**Stage 1 — Map import (done).** The race map is imported and rendered, with
-free-orbit camera controls so you can inspect it from any angle. Cars and
-gameplay come next.
+- **Stage 1 — Map import (done).** The highway-battle map is imported and rendered.
+- **Stage 2 — Drivable car (done).** An F1 car is imported, collides with the
+  map surface, and is drivable with the keyboard.
 
 ## Getting started
 
@@ -17,49 +17,83 @@ npm run dev      # start the dev server (prints a local URL)
 ```
 
 Then open the printed URL (default http://localhost:5173) in a browser.
-Drag to orbit, scroll to zoom, right-drag to pan.
+
+### Controls
+
+| Key                 | Action            |
+| ------------------- | ----------------- |
+| `W` / `↑`           | Accelerate        |
+| `S` / `↓`           | Brake / reverse   |
+| `A` / `←`           | Steer left        |
+| `D` / `→`           | Steer right       |
+| `Space`             | Handbrake         |
+| `C`                 | Toggle free-orbit camera (inspect) |
 
 ### Other commands
 
 ```bash
 npm run build         # production build into dist/
 npm run preview       # preview the production build
-npm run validate-map  # validate the .glb with the official Khronos validator
+npm run validate-map  # validate both .glb assets with the Khronos validator
 ```
 
-## The map
+## Assets
 
-`public/models/carracemap1.glb` — a self-contained glTF 2.0 binary.
+Both files in `public/models/` are self-contained glTF 2.0 binaries and pass the
+official Khronos validator with **0 errors**.
 
-- glTF 2.0, single scene, **594 meshes**, **62 materials**, **61 embedded PNG textures**
-- Only extension used: `KHR_materials_unlit` (no required extensions)
-- No Draco / Meshopt / KTX2 compression → loads with a plain `GLTFLoader`,
-  no extra decoders needed.
+| Asset             | Contents                                              |
+| ----------------- | ----------------------------------------------------- |
+| `carracemap1.glb` | 594 meshes, 62 materials, 61 embedded PNG textures, `KHR_materials_unlit` |
+| `f1car.glb`       | 11 meshes (body + 4 wheels), 5 PBR materials, no extensions |
 
-The loader (`src/game/MapLoader.js`) deliberately does **not** alter the map's
-transforms or material colors: Three.js' `GLTFLoader` already applies the
-Sketchfab Z-up→Y-up root matrix and decodes textures in the correct color
-space, so the map renders exactly as authored.
+Neither uses Draco / Meshopt / KTX2 compression, so both load with a plain
+`GLTFLoader` — no extra decoders. The loaders deliberately do **not** alter the
+assets' transforms or material colors; Three.js' `GLTFLoader` already applies
+the Sketchfab Z-up→Y-up root matrix and correct texture color spaces, so they
+render exactly as authored.
 
-### Attribution (required)
+## How the car works
 
-Map: **"NFS Undercover DS – Highway Battle"** by
-[amogusstrikesback2](https://sketchfab.com/amogusstrikesback2) on
-[Sketchfab](https://sketchfab.com/3d-models/nfs-undercover-ds-highway-battle-e8b1859b628a42209b8866d9a4b45936),
-licensed under [CC-BY-4.0](http://creativecommons.org/licenses/by/4.0/).
-The attribution is also shown in-game (bottom-right).
+- **Import** (`src/game/Car.js`): the F1 model carries a 100× scale baked into
+  its Sketchfab root matrix, so its native world size is ~84×46×230. We scale it
+  uniformly to a target length (80 units), recenter it so the wheels sit at
+  `y = 0`, and rotate it 180° so its nose points along the driving direction.
+- **Collision with the map**: each frame the car raycasts straight down onto the
+  map's meshes to find the surface, then snaps its height to that surface and
+  tilts to the surface normal. Before moving it samples the ground at the
+  *target* position: if there's no surface (edge of the world) or it rises more
+  than the car can step over (a wall / building side), the move is blocked. This
+  is real collision against the actual map geometry, not a flat ground plane.
+- **Driving** (arcade): throttle accelerates along the heading, steering rotates
+  the heading (more effective the faster you go), with drag, rolling friction
+  and braking/reverse. A chase camera (`src/game/ChaseCamera.js`) trails behind.
+
+### Attribution (required, CC-BY-4.0)
+
+- **Map:** "NFS Undercover DS – Highway Battle" by
+  [amogusstrikesback2](https://sketchfab.com/amogusstrikesback2).
+- **Car:** "Low Poly F1 Car" by
+  [Straight Design](https://sketchfab.com/creativemango).
+
+Both on [Sketchfab](https://sketchfab.com/), licensed under
+[CC-BY-4.0](http://creativecommons.org/licenses/by/4.0/). The map attribution is
+also shown in-game (bottom-right).
 
 ## Project layout
 
 ```
-index.html              # entry HTML + loading overlay & HUD
-public/models/*.glb      # static map asset (served verbatim)
+index.html               # entry HTML + loading overlay, HUD, speedometer
+public/models/*.glb       # static map + car assets (served verbatim)
 src/
-  main.js                # boots the Game, wires the loading UI
-  style.css              # UI / overlay styling
+  main.js                 # boots the Game, loads map + car, wires UI
+  style.css               # UI / overlay styling
   game/
-    Game.js              # renderer, scene, camera, lights, render loop
-    MapLoader.js         # loads & prepares the .glb map correctly
+    Game.js               # renderer, scene, camera, lights, render loop
+    MapLoader.js          # loads & prepares the map
+    Car.js                # car import, raycast collision, driving physics
+    Controls.js           # keyboard input (WASD / arrows)
+    ChaseCamera.js         # third-person follow camera
 scripts/
-  validate-map.mjs       # Khronos glTF validation (npm run validate-map)
+  validate-map.mjs        # Khronos glTF validation for both assets
 ```

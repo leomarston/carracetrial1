@@ -111,6 +111,32 @@ body {
   backdrop-filter: blur(4px);
 }
 
+/* ---- Speedometer ---- */
+#speedo-wrap {
+  position: fixed;
+  bottom: 18px;
+  left: 18px;
+  z-index: 10;
+  pointer-events: none;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 10px 16px;
+  border-radius: 10px;
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: opacity 0.4s ease;
+}
+
+#speedo-wrap.hidden {
+  opacity: 0;
+}
+
+#speedo {
+  font-size: 1.6rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+}
+
 /* ---- Attribution (CC-BY-4.0 requirement) ---- */
 #attribution {
   position: fixed;

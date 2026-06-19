@@ -1,6 +1,9 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { loadMap } from './MapLoader.js';
+import { Car } from './Car.js';
+import { Controls } from './Controls.js';
+import { ChaseCamera } from './ChaseCamera.js';
 
 /**
  * Core game shell: renderer, scene, camera, lights and the render loop.
@@ -92,9 +95,47 @@ export class Game {
     this.mapStats = stats;
     this.scene.add(root);
 
+    // Cache the map's meshes so the car can raycast collisions against them.
+    this.mapMeshes = [];
+    root.traverse((o) => { if (o.isMesh) this.mapMeshes.push(o); });
+
     this._frameCameraTo(stats.bounds);
     this._configureLightsToBounds(stats.bounds);
     return stats;
+  }
+
+  /**
+   * Load the player car, drop it onto the map and switch to a chase camera.
+   * @param {string} url
+   * @param {{x:number, z:number, heading?:number}} spawn
+   * @param {object} [opts] forwarded to Car (targetLength, flip).
+   */
+  async addCar(url, spawn, opts = {}) {
+    const car = new Car(this.mapMeshes ?? [], opts);
+    await car.load(url);
+    car.placeAt(spawn.x, spawn.z, spawn.heading ?? 0);
+    this.scene.add(car.object3D);
+
+    this.car = car;
+    this.input = new Controls();
+    this.chaseCam = new ChaseCamera(this.camera, car);
+    this.setDriving(true);
+
+    // 'C' toggles between driving (chase cam) and free-orbit inspection.
+    window.addEventListener('keydown', (e) => {
+      if (e.key.toLowerCase() === 'c') this.setDriving(!this.driving);
+    });
+    return car;
+  }
+
+  setDriving(on) {
+    this.driving = on;
+    this.controls.enabled = !on;
+    if (!on && this.car) {
+      // Hand the orbit camera a sensible target on the car.
+      this.controls.target.copy(this.car.object3D.position);
+      this.controls.update();
+    }
   }
 
   /** Position camera + controls so the whole map is comfortably in view. */
@@ -146,8 +187,19 @@ export class Game {
   _tick() {
     this.timer.update();
     const dt = this.timer.getDelta();
+
+    if (this.car && this.driving) {
+      this.car.update(dt, {
+        throttle: this.input.throttle,
+        steer: this.input.steer,
+        handbrake: this.input.handbrake,
+      });
+      this.chaseCam.update(dt);
+    } else if (this.controls.enabled) {
+      this.controls.update();
+    }
+
     for (const e of this.updateables) e.update(dt);
-    this.controls.update();
     this.renderer.render(this.scene, this.camera);
   }
 
