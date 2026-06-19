@@ -1,0 +1,133 @@
+:root {
+  --accent: #ff3b30;
+  --bg: #0a0c10;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: #fff;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+#app {
+  position: fixed;
+  inset: 0;
+}
+
+#app canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* ---- Loading overlay ---- */
+#loading-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 50% 40%, #161a22 0%, #06080b 100%);
+  transition: opacity 0.6s ease;
+}
+
+#loading-overlay.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.loading-box {
+  text-align: center;
+  width: min(420px, 80vw);
+}
+
+.loading-box h1 {
+  font-size: clamp(1.4rem, 5vw, 2.4rem);
+  letter-spacing: 0.25em;
+  font-weight: 800;
+  margin-bottom: 1.5rem;
+  background: linear-gradient(90deg, #fff, var(--accent));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.progress-track {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+#progress-bar {
+  width: 0%;
+  height: 100%;
+  background: var(--accent);
+  border-radius: 999px;
+  transition: width 0.2s ease;
+}
+
+#loading-status {
+  margin-top: 0.9rem;
+  font-size: 0.85rem;
+  opacity: 0.7;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- HUD ---- */
+#hud {
+  position: fixed;
+  top: 14px;
+  left: 14px;
+  z-index: 10;
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+}
+
+#hud.hidden {
+  opacity: 0;
+}
+
+#map-stats {
+  font-size: 0.72rem;
+  line-height: 1.5;
+  opacity: 0.55;
+  font-variant-numeric: tabular-nums;
+  background: rgba(0, 0, 0, 0.35);
+  padding: 8px 10px;
+  border-radius: 8px;
+  backdrop-filter: blur(4px);
+}
+
+/* ---- Attribution (CC-BY-4.0 requirement) ---- */
+#attribution {
+  position: fixed;
+  bottom: 8px;
+  right: 10px;
+  z-index: 10;
+  font-size: 0.68rem;
+  opacity: 0.5;
+  max-width: 60vw;
+  text-align: right;
+}
+
+#attribution a {
+  color: #9cc4ff;
+  text-decoration: none;
+}
+
+#attribution a:hover {
+  text-decoration: underline;
+}

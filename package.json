@@ -1,0 +1,20 @@
+{
+  "name": "carracetrial1",
+  "version": "0.1.0",
+  "description": "A 3D car racing game built with Three.js. Stage 1: highway battle map import.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "validate-map": "node scripts/validate-map.mjs"
+  },
+  "dependencies": {
+    "three": "^0.184.0"
+  },
+  "devDependencies": {
+    "gltf-validator": "^2.0.0-dev.3.10",
+    "vite": "^6.3.5"
+  }
+}

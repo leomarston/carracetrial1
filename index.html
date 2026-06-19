@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Car Race — Highway Battle</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>🏎️</text></svg>"
+    />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div id="app"></div>
+
+    <!-- Loading overlay -->
+    <div id="loading-overlay">
+      <div class="loading-box">
+        <h1>HIGHWAY BATTLE</h1>
+        <div class="progress-track">
+          <div id="progress-bar"></div>
+        </div>
+        <p id="loading-status">Loading map…</p>
+      </div>
+    </div>
+
+    <!-- In-world HUD / info -->
+    <div id="hud" class="hidden">
+      <div id="map-stats"></div>
+    </div>
+
+    <!-- Attribution required by the map's CC-BY-4.0 license -->
+    <div id="attribution">
+      Map: <a href="https://sketchfab.com/3d-models/nfs-undercover-ds-highway-battle-e8b1859b628a42209b8866d9a4b45936" target="_blank" rel="noopener">"NFS Undercover DS – Highway Battle"</a>
+      by <a href="https://sketchfab.com/amogusstrikesback2" target="_blank" rel="noopener">amogusstrikesback2</a>
+      (<a href="http://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC-BY-4.0</a>)
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
