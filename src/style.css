@@ -130,11 +130,42 @@ body {
   opacity: 0;
 }
 
+.readout {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
 #speedo {
   font-size: 1.6rem;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   color: var(--accent);
+}
+
+#gear {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #fff;
+  opacity: 0.85;
+  min-width: 1.2em;
+  text-align: center;
+}
+
+#rpm-track {
+  margin-top: 7px;
+  width: 150px;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+#rpm-bar {
+  width: 0%;
+  height: 100%;
+  background: linear-gradient(90deg, #46d36a, #f0c020 70%, #ff3b30 92%);
+  transition: width 0.06s linear;
 }
 
 /* ---- Attribution (CC-BY-4.0 requirement) ---- */

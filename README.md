@@ -7,10 +7,13 @@ A 3D car racing game built with [Three.js](https://threejs.org/), the
 
 - **Stage 1 — Map import (done).** The highway-battle map is imported and rendered.
 - **Stage 2 — Drivable car (done).** An F1 car is imported and drivable.
-- **Stage 3 — Real driving physics (in progress).** The car is now a Rapier
+- **Stage 3 — Real driving physics (in progress).** The car is a Rapier
   raycast vehicle: a dynamic chassis with four suspension wheels, grip/slip,
-  weight transfer and real collisions. Next: drivetrain/RPM, audio, dynamic
-  camera, skid marks & smoke (the "feel" pass).
+  weight transfer and real collisions. **Feel pass:** spinning/steering wheels,
+  brake lights, RPM/gear model, dynamic chase camera (speed-FOV, shake,
+  look-into-corner), tyre **skid marks & smoke**, and procedural **audio**
+  (engine, tyre screech, wind). Next: tuning + per-surface grip, then race
+  structure (laps/checkpoints).
 
 ## Getting started
 

@@ -54,14 +54,19 @@ async function boot() {
     `<b>W/A/S/D</b> drive · <b>Space</b> handbrake · <b>R</b> reset · <b>C</b> free cam`,
   ].join('<br/>');
 
-  // Live speedometer (m/s -> km/h).
-  const updateSpeedo = () => {
-    if (speedEl && game.car) {
-      speedEl.textContent = `${Math.abs(game.car.speed * 3.6).toFixed(0)} km/h`;
+  // Live speedometer / gear / tachometer.
+  const gearEl = document.getElementById('gear');
+  const rpmBar = document.getElementById('rpm-bar');
+  const updateHud = () => {
+    const c = game.car;
+    if (c) {
+      speedEl.textContent = `${Math.abs(c.speed * 3.6).toFixed(0)} km/h`;
+      gearEl.textContent = c.gear === 0 ? 'R' : `${c.gear}`;
+      rpmBar.style.width = `${Math.min(100, (c.rpm / c.engine.redline) * 100).toFixed(0)}%`;
     }
-    requestAnimationFrame(updateSpeedo);
+    requestAnimationFrame(updateHud);
   };
-  updateSpeedo();
+  updateHud();
 
   window.__game = game;
   console.info('[carrace] Physics vehicle ready.', { carSize: car.size });

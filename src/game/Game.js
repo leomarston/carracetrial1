@@ -4,6 +4,8 @@ import { loadMap } from './MapLoader.js';
 import { Vehicle } from './Vehicle.js';
 import { Controls } from './Controls.js';
 import { ChaseCamera } from './ChaseCamera.js';
+import { Effects } from './Effects.js';
+import { AudioManager } from './AudioManager.js';
 import { PhysicsWorld, buildTrimeshFromMeshes } from '../physics/PhysicsWorld.js';
 
 /**
@@ -121,6 +123,8 @@ export class Game {
     this.car = car;
     this.input = new Controls();
     this.chaseCam = new ChaseCamera(this.camera, car);
+    this.effects = new Effects(this.scene, car);
+    this.audio = new AudioManager(car);
     this.setDriving(true);
 
     window.addEventListener('keydown', (e) => {
@@ -200,6 +204,8 @@ export class Game {
       });
       this.physics.step(dt, (h) => this.car.fixedUpdate(h));
       this.car.syncVisual(dt);
+      this.effects.update(dt);
+      this.audio.update();
 
       if (this.driving) this.chaseCam.update(dt);
       else if (this.controls.enabled) this.controls.update();
