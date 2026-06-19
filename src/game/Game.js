@@ -7,6 +7,7 @@ import { ChaseCamera } from './ChaseCamera.js';
 import { Effects } from './Effects.js';
 import { AudioManager } from './AudioManager.js';
 import { PhysicsWorld, buildTrimeshFromMeshes } from '../physics/PhysicsWorld.js';
+import { buildRoadEdgeWalls } from '../physics/roadWalls.js';
 
 /**
  * Core game shell: renderer, scene, camera, lights, the Rapier physics world
@@ -103,6 +104,15 @@ export class Game {
     root.traverse((o) => { if (o.isMesh) this.mapMeshes.push(o); });
     const { vertices, indices } = buildTrimeshFromMeshes(this.mapMeshes);
     this.physics.addStaticTrimesh(vertices, indices);
+
+    // Invisible barriers along the road edges so the car stays on the track.
+    const roadMeshes = this.mapMeshes.filter((m) => /Road2/i.test(m.name));
+    const walls = buildRoadEdgeWalls(roadMeshes, { weld: 0.3, height: 2.5 });
+    if (walls.indices.length) {
+      this.physics.addStaticTrimesh(walls.vertices, walls.indices);
+      this.roadWallFaces = walls.faces;
+      this.roadWallGeom = walls;
+    }
 
     this._frameCameraTo(stats.bounds);
     this._configureLightsToBounds(stats.bounds);
