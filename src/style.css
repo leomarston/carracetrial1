@@ -52,21 +52,50 @@ body {
   background: #05060d url("./image.png") center / cover no-repeat;
 }
 
-/* The image already has the title, frame and "LOADING" text — hide our own. */
+/* The image has its own title; we draw our own loading bar (below). */
 .ls-photo::before, .ls-photo::after { content: none; }
-.ls-vignette, .ls-title, .ls-loading-label, .ls-star, .ls-status { display: none; }
+.ls-title, .ls-status { display: none; }
 
-/* The dynamic fill is laid over the painted bar's interior (bottom-right). */
-.ls-loading { position: absolute; inset: 0; pointer-events: none; }
+/* Scrim that hides the image's PAINTED loading bar/text in the bottom-right.
+   The inner core is FULLY opaque (alpha 1) so the bright painted bar can't
+   ghost through; it only feathers to transparent at the outer edge, blending
+   into the dark scene. Our own clean bar is drawn on top. */
+.ls-vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(36vw 26vh at 84% 95%,
+    rgba(4, 6, 11, 1) 0 62%, rgba(4, 6, 11, 0) 100%);
+}
+
+/* One clean dynamic loading widget, where the painted one used to be. */
+.ls-loading {
+  position: absolute;
+  right: clamp(18px, 3.2vw, 60px);
+  bottom: clamp(26px, 7vh, 70px);
+  width: clamp(230px, 30vw, 460px);
+  text-align: right;
+  pointer-events: none;
+}
+
+.ls-loading-label {
+  font-size: clamp(1rem, 2.4vw, 1.6rem);
+  font-weight: 800;
+  letter-spacing: 0.24em;
+  color: #eaf6ff;
+  text-shadow: 0 0 14px rgba(70, 190, 255, 0.6);
+  transform: skewX(-12deg);
+  margin-bottom: 9px;
+}
+
+.ls-dots { display: inline-block; width: 1.1em; text-align: left; }
 
 .ls-bar {
-  position: absolute;
-  left: 68.4%;
-  top: 90.0%;
-  width: 26.6%;
-  height: 3.4%;
+  position: relative;
+  height: clamp(12px, 1.9vh, 18px);
   transform: skewX(-19deg);
-  background: rgba(6, 10, 16, 0.97); /* hides the painted segments underneath */
+  background: rgba(8, 16, 28, 0.6);
+  border: 1px solid rgba(120, 205, 255, 0.45);
+  box-shadow: 0 0 16px rgba(40, 150, 255, 0.3), inset 0 0 8px rgba(0, 0, 0, 0.6);
   overflow: hidden;
 }
 
@@ -74,17 +103,26 @@ body {
   position: absolute;
   inset: 0 auto 0 0;
   width: 0%;
-  background: linear-gradient(90deg, #b14be8, #5a7cff 45%, #2fd3ff);
-  box-shadow: 0 0 12px rgba(80, 200, 255, 0.7);
+  background: linear-gradient(90deg, #b14be8, #5a7cff 50%, #2fd3ff);
+  box-shadow: 0 0 14px rgba(90, 200, 255, 0.85);
   transition: width 0.25s ease;
 }
 
-/* Dark dividers over the fill → segmented cells (matching the art). */
+/* Dark dividers over the fill → segmented cells (matching the art style). */
 .ls-segments {
   position: absolute;
   inset: 0;
-  background: repeating-linear-gradient(90deg, transparent 0 14px, rgba(4, 8, 14, 0.85) 14px 18px);
+  background: repeating-linear-gradient(90deg, transparent 0 14px, rgba(4, 8, 14, 0.8) 14px 18px);
   pointer-events: none;
+}
+
+.ls-star {
+  position: absolute;
+  right: -2px; top: 50%;
+  transform: translateY(-50%) skewX(19deg);
+  color: #d6f4ff;
+  font-size: clamp(11px, 1.6vh, 15px);
+  text-shadow: 0 0 9px rgba(120, 220, 255, 0.9);
 }
 
 /* ============================================================================
