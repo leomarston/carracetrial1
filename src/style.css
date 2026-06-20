@@ -30,16 +30,14 @@ body {
   height: 100%;
 }
 
-/* ---- Loading overlay ---- */
+/* ---- Loading overlay (neon racing splash) ---- */
 #loading-overlay {
   position: fixed;
   inset: 0;
   z-index: 100;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: radial-gradient(circle at 50% 40%, #161a22 0%, #06080b 100%);
+  overflow: hidden;
   transition: opacity 0.6s ease;
+  font-family: "Arial Narrow", "Roboto Condensed", "Oswald", Impact, system-ui, sans-serif;
 }
 
 #loading-overlay.hidden {
@@ -47,43 +45,146 @@ body {
   pointer-events: none;
 }
 
-.loading-box {
-  text-align: center;
-  width: min(420px, 80vw);
+/* Neon night-city backdrop, built from gradients (drop in your own art here). */
+.ls-photo {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(120% 80% at 78% 18%, rgba(120, 60, 200, 0.45) 0%, transparent 55%),
+    radial-gradient(90% 70% at 18% 22%, rgba(0, 150, 230, 0.40) 0%, transparent 55%),
+    radial-gradient(140% 120% at 50% 120%, rgba(255, 90, 0, 0.30) 0%, transparent 45%),
+    linear-gradient(180deg, #0a1430 0%, #0b1024 45%, #05060d 100%);
 }
 
-.loading-box h1 {
-  font-size: clamp(1.4rem, 5vw, 2.4rem);
-  letter-spacing: 0.25em;
+/* Faux skyline + speed streaks for a bit of depth. */
+.ls-photo::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    repeating-linear-gradient(90deg, transparent 0 26px, rgba(120, 200, 255, 0.05) 26px 28px),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.015) 0 7px, transparent 7px 16px);
+  -webkit-mask-image: linear-gradient(180deg, transparent 38%, #000 50%, #000 72%, transparent 86%);
+  mask-image: linear-gradient(180deg, transparent 38%, #000 50%, #000 72%, transparent 86%);
+  opacity: 0.7;
+}
+
+.ls-photo::after {
+  content: "";
+  position: absolute;
+  left: -10%; right: -10%; top: 56%; height: 42%;
+  background: repeating-linear-gradient(-14deg, transparent 0 60px, rgba(80, 200, 255, 0.06) 60px 64px);
+  filter: blur(1px);
+}
+
+.ls-vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120% 100% at 50% 40%, transparent 55%, rgba(0, 0, 0, 0.6) 100%);
+}
+
+/* Title (blue + orange split, à la a racing splash). */
+.ls-title {
+  position: absolute;
+  left: clamp(20px, 5vw, 80px);
+  bottom: clamp(60px, 16vh, 150px);
+  transform: skewX(-9deg);
+}
+
+.ls-title h1 {
+  display: flex;
+  gap: 0.12em;
+  font-size: clamp(2.6rem, 9vw, 6.2rem);
   font-weight: 800;
-  margin-bottom: 1.5rem;
-  background: linear-gradient(90deg, #fff, var(--accent));
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+  line-height: 0.9;
+  letter-spacing: 0.01em;
 }
 
-.progress-track {
-  width: 100%;
-  height: 6px;
-  background: rgba(255, 255, 255, 0.12);
-  border-radius: 999px;
+.ls-title .t1 {
+  background: linear-gradient(180deg, #cfe6ff, #3aa0ff 60%, #1e6fd0);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 28px rgba(40, 140, 255, 0.4);
+}
+
+.ls-title .t2 {
+  background: linear-gradient(180deg, #ffe6c2, #ff8a1e 55%, #ff5a00);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 28px rgba(255, 120, 0, 0.4);
+}
+
+.ls-tag {
+  margin-top: 0.5rem;
+  font-size: clamp(0.8rem, 2.4vw, 1.4rem);
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  color: #dfe9f5;
+  opacity: 0.92;
+}
+
+/* Dynamic segmented loading bar (bottom-right). */
+.ls-loading {
+  position: absolute;
+  right: clamp(18px, 3vw, 48px);
+  bottom: clamp(34px, 9vh, 80px);
+  width: clamp(220px, 30vw, 380px);
+  text-align: right;
+}
+
+.ls-loading-label {
+  font-size: clamp(1rem, 2.6vw, 1.5rem);
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  color: #eaf6ff;
+  text-shadow: 0 0 12px rgba(70, 190, 255, 0.5);
+  transform: skewX(-9deg);
+  margin-bottom: 8px;
+}
+
+.ls-dots { display: inline-block; width: 1.1em; text-align: left; }
+
+.ls-bar {
+  position: relative;
+  height: 16px;
+  transform: skewX(-22deg);
+  background: rgba(8, 16, 26, 0.7);
+  border: 1px solid rgba(110, 200, 255, 0.35);
+  box-shadow: 0 0 14px rgba(40, 150, 255, 0.25), inset 0 0 8px rgba(0, 0, 0, 0.6);
   overflow: hidden;
 }
 
-#progress-bar {
+.ls-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
   width: 0%;
-  height: 100%;
-  background: var(--accent);
-  border-radius: 999px;
-  transition: width 0.2s ease;
+  background: linear-gradient(90deg, #1e7fe0, #46c8ff 70%, #d6f4ff);
+  box-shadow: 0 0 14px rgba(70, 200, 255, 0.8);
+  transition: width 0.25s ease;
 }
 
-#loading-status {
-  margin-top: 0.9rem;
-  font-size: 0.85rem;
-  opacity: 0.7;
+/* Dark dividers over the fill → segmented cells. */
+.ls-segments {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(90deg, transparent 0 13px, rgba(4, 8, 14, 0.92) 13px 17px);
+  pointer-events: none;
+}
+
+.ls-star {
+  position: absolute;
+  right: 3px; top: 50%;
+  transform: translateY(-50%) skewX(22deg);
+  color: #d6f4ff;
+  font-size: 12px;
+  text-shadow: 0 0 8px rgba(120, 220, 255, 0.9);
+}
+
+.ls-status {
+  margin-top: 7px;
+  font-size: 0.74rem;
+  letter-spacing: 0.05em;
+  opacity: 0.6;
   font-variant-numeric: tabular-nums;
+  color: #cfe0f0;
 }
 
 /* ============================================================================

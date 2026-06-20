@@ -20,36 +20,39 @@ const overlay = document.getElementById('loading-overlay');
 const progressBar = document.getElementById('progress-bar');
 const status = document.getElementById('loading-status');
 
+const setProgress = (pct, msg) => {
+  progressBar.style.width = `${Math.max(0, Math.min(100, pct)).toFixed(0)}%`;
+  if (msg) status.textContent = msg;
+};
+
 async function boot() {
-  status.textContent = 'Initialising physics…';
+  setProgress(2, 'Initialising physics…');
   await RAPIER.init(); // load the Rapier WASM once, before any physics is created
 
   const game = new Game(document.getElementById('app'));
   game.start();
 
+  // The whole load drives one bar: map 5→50 %, then each car, gantry, ready.
   const stats = await game.loadMap(MAP_URL, (pct, loaded, total) => {
-    if (total > 0) {
-      progressBar.style.width = `${pct.toFixed(0)}%`;
-      status.textContent = `Loading map… ${(loaded / 1e6).toFixed(1)} / ${(total / 1e6).toFixed(1)} MB`;
-    } else {
-      status.textContent = `Loading map… ${(loaded / 1e6).toFixed(1)} MB`;
-    }
+    setProgress(5 + pct * 0.45, total > 0
+      ? `Loading map… ${(loaded / 1e6).toFixed(1)} / ${(total / 1e6).toFixed(1)} MB`
+      : `Loading map… ${(loaded / 1e6).toFixed(1)} MB`);
   });
 
-  status.textContent = 'Loading Player 1 car…';
+  setProgress(54, 'Loading Player 1 car…');
   await game.addCar(P1_CAR, TRACK.spawn);
 
-  status.textContent = 'Loading Player 2 car…';
+  setProgress(62, 'Loading Player 2 car…');
   await game.addPlayer2(P2_CAR, TRACK.p2Spawn);
 
-  status.textContent = 'Loading bots…';
+  setProgress(68, 'Loading bots…');
   await game.addBots(BOT_CARS, TRACK);
 
-  status.textContent = 'Placing start/finish line…';
+  setProgress(94, 'Placing start/finish line…');
   await game.addStartFinishGantry(TRACK.gantry);
   game.setupRace(TRACK, document.getElementById('minimap'));
 
-  progressBar.style.width = '100%';
+  setProgress(100, 'Ready');
   overlay.classList.add('hidden');
   for (const id of ['p1-hud', 'p2-hud', 'divider', 'minimap-wrap']) {
     document.getElementById(id).classList.remove('hidden');

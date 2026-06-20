@@ -13,14 +13,25 @@
   <body>
     <div id="app"></div>
 
-    <!-- Loading overlay -->
+    <!-- Loading overlay (neon racing splash). Swap .ls-photo's background-image
+         for your own licensed key-art if you have one. -->
     <div id="loading-overlay">
-      <div class="loading-box">
-        <h1>HIGHWAY BATTLE</h1>
-        <div class="progress-track">
-          <div id="progress-bar"></div>
+      <div class="ls-photo"></div>
+      <div class="ls-vignette"></div>
+
+      <div class="ls-title">
+        <h1><span class="t1">HIGHWAY</span><span class="t2">BATTLE</span></h1>
+        <p class="ls-tag">TWO PLAYERS &middot; ONE ROAD</p>
+      </div>
+
+      <div class="ls-loading">
+        <div class="ls-loading-label">LOADING<span class="ls-dots">…</span></div>
+        <div class="ls-bar">
+          <div id="progress-bar" class="ls-fill"></div>
+          <div class="ls-segments"></div>
+          <div class="ls-star">★</div>
         </div>
-        <p id="loading-status">Loading map…</p>
+        <p id="loading-status" class="ls-status">Loading…</p>
       </div>
     </div>
 
