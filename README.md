@@ -28,9 +28,16 @@ A 3D car racing game built with [Three.js](https://threejs.org/), the
   (`RaceManager.js`) counts a lap only when you cross the line *and* have gone a
   full ~360° around the loop (no cheating, no hand-placed checkpoints). `R`
   restarts the race.
+- **Car select (done).** Before the race, a split-screen **CAR SELECT** screen
+  (`src/game/CarSelect.js`) lets each player browse the catalog and pick their
+  own car — the model spins on a turntable (real 3D, livery-tinted) with its
+  TOP SPEED / ACCELERATION / HANDLING ratings, tier badge and value, in a
+  racing-game style. Whatever the two players don't pick becomes the AI bot
+  field. It runs its own small renderer (disposed before the game starts), then
+  hands the picks to the loading screen.
 - **Two-player split-screen (done).** Two humans race head-to-head on one
-  keyboard: **Player 1 drives the Mercedes (top half, WASD)** and **Player 2 drives the
-  Koenigsegg (bottom half, arrow keys)**. The screen is split **horizontally**
+  keyboard: **Player 1 drives the top half (WASD)** and **Player 2 drives the
+  bottom half (arrow keys)** — each in the car they chose. The screen is split **horizontally**
   into two viewports, each with its own chase camera following its car; both cars
   live in the same physics world so they collide and can block each other. Each
   half has its own speed/gear/lap/position HUD, a shared minimap (P1 = blue,
@@ -59,9 +66,20 @@ npm run dev      # start the dev server (prints a local URL)
 
 Then open the printed URL (default http://localhost:5173) in a browser.
 
+### Controls — car select (before the race)
+
+| Action       | Player 1        | Player 2                  |
+| ------------ | --------------- | ------------------------- |
+| Change car   | `A` / `D`       | `←` / `→`                 |
+| Ready        | `W` / `Enter`   | `↑` / `Right-Shift`       |
+| Cancel ready | `S`             | `↓`                       |
+
+The arrows and the **Ready** button are also clickable. The race starts once
+both players are ready.
+
 ### Controls (2-player split-screen)
 
-| Action          | Player 1 (top, Mercedes) | Player 2 (bottom, Koenigsegg) |
+| Action          | Player 1 (top) | Player 2 (bottom) |
 | --------------- | ------------------ | ----------------------------- |
 | Accelerate      | `W`                | `↑`                           |
 | Brake / reverse | `S`                | `↓`                           |

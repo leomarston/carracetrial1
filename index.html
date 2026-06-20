@@ -8,14 +8,102 @@
       rel="icon"
       href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>🏎️</text></svg>"
     />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Saira+Condensed:ital,wght@0,600;0,700;0,800;1,700;1,800&family=Oswald:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="/src/style.css" />
   </head>
   <body>
     <div id="app"></div>
 
-    <!-- Loading overlay (neon racing splash). Swap .ls-photo's background-image
-         for your own licensed key-art if you have one. -->
-    <div id="loading-overlay">
+    <!-- ===================== CAR SELECT (pre-race, split-screen) =====================
+         Top half = Player 1, bottom half = Player 2. The 3D cars render onto
+         #cs-canvas; the panels below are the racing UI. Driven by CarSelect.js. -->
+    <div id="car-select">
+      <canvas id="cs-canvas"></canvas>
+      <div id="cs-divider"></div>
+      <div class="cs-startflash">GET READY!</div>
+
+      <!-- ---------- Player 1 (top) ---------- -->
+      <section id="cs-p1" class="cs-half">
+        <header class="cs-header">
+          <svg class="cs-chevrons" viewBox="0 0 48 34" aria-hidden="true">
+            <path d="M2 2 L20 17 L2 32" /><path d="M16 2 L34 17 L16 32" /><path d="M30 2 L48 17 L30 32" />
+          </svg>
+          <div class="cs-title-wrap">
+            <div class="cs-title"><span>&#9733;</span> CAR SELECT <span>&#9733;</span></div>
+            <div class="cs-player">PLAYER 1</div>
+          </div>
+        </header>
+
+        <div class="cs-stats">
+          <div class="cs-stat"><span class="cs-stat-lbl">TOP SPEED</span><span class="cs-bar"><span id="cs-p1-speed" class="cs-bar-fill"></span></span></div>
+          <div class="cs-stat"><span class="cs-stat-lbl">ACCELERATION</span><span class="cs-bar"><span id="cs-p1-accel" class="cs-bar-fill"></span></span></div>
+          <div class="cs-stat"><span class="cs-stat-lbl">HANDLING</span><span class="cs-bar"><span id="cs-p1-handling" class="cs-bar-fill"></span></span></div>
+          <div class="cs-cash"><span>Cash: <b>52,050</b></span><span>Value: <b id="cs-p1-value">0</b></span></div>
+        </div>
+
+        <div class="cs-heat"><span class="cs-flame">&#128293;</span><b>0</b><span class="cs-heat-bar"></span></div>
+
+        <footer class="cs-foot">
+          <div class="cs-tier">
+            <svg class="cs-caricon" viewBox="0 0 64 28" aria-hidden="true"><path d="M3 22 h58 M8 22 a4 4 0 1 0 8 0 a4 4 0 1 0 -8 0 M48 22 a4 4 0 1 0 8 0 a4 4 0 1 0 -8 0 M10 18 l6 -9 h22 l10 9 z"/></svg>
+            <div><span class="cs-klass" id="cs-p1-klass">EXOTIC</span><span class="cs-tier-n" id="cs-p1-tier">TIER 3</span></div>
+          </div>
+          <div class="cs-namebar">
+            <button class="cs-arrow" data-cs-arrow="-1" data-cs-player="p1" aria-label="Previous car">&#8249;</button>
+            <div class="cs-name"><span class="cs-brand" id="cs-p1-brand">Brand</span><span class="cs-model" id="cs-p1-model">Model</span></div>
+            <button class="cs-arrow" data-cs-arrow="1" data-cs-player="p1" aria-label="Next car">&#8250;</button>
+          </div>
+          <button class="cs-ready" id="cs-p1-ready" data-cs-ready data-cs-player="p1">PRESS W</button>
+        </footer>
+
+        <div class="cs-hint"><b>A</b>/<b>D</b> CHANGE&nbsp;&nbsp;&middot;&nbsp;&nbsp;<b>W</b> READY&nbsp;&nbsp;&middot;&nbsp;&nbsp;<b>S</b> CANCEL</div>
+      </section>
+
+      <!-- ---------- Player 2 (bottom) ---------- -->
+      <section id="cs-p2" class="cs-half">
+        <header class="cs-header">
+          <svg class="cs-chevrons" viewBox="0 0 48 34" aria-hidden="true">
+            <path d="M2 2 L20 17 L2 32" /><path d="M16 2 L34 17 L16 32" /><path d="M30 2 L48 17 L30 32" />
+          </svg>
+          <div class="cs-title-wrap">
+            <div class="cs-title"><span>&#9733;</span> CAR SELECT <span>&#9733;</span></div>
+            <div class="cs-player">PLAYER 2</div>
+          </div>
+        </header>
+
+        <div class="cs-stats">
+          <div class="cs-stat"><span class="cs-stat-lbl">TOP SPEED</span><span class="cs-bar"><span id="cs-p2-speed" class="cs-bar-fill"></span></span></div>
+          <div class="cs-stat"><span class="cs-stat-lbl">ACCELERATION</span><span class="cs-bar"><span id="cs-p2-accel" class="cs-bar-fill"></span></span></div>
+          <div class="cs-stat"><span class="cs-stat-lbl">HANDLING</span><span class="cs-bar"><span id="cs-p2-handling" class="cs-bar-fill"></span></span></div>
+          <div class="cs-cash"><span>Cash: <b>52,050</b></span><span>Value: <b id="cs-p2-value">0</b></span></div>
+        </div>
+
+        <div class="cs-heat"><span class="cs-flame">&#128293;</span><b>0</b><span class="cs-heat-bar"></span></div>
+
+        <footer class="cs-foot">
+          <div class="cs-tier">
+            <svg class="cs-caricon" viewBox="0 0 64 28" aria-hidden="true"><path d="M3 22 h58 M8 22 a4 4 0 1 0 8 0 a4 4 0 1 0 -8 0 M48 22 a4 4 0 1 0 8 0 a4 4 0 1 0 -8 0 M10 18 l6 -9 h22 l10 9 z"/></svg>
+            <div><span class="cs-klass" id="cs-p2-klass">EXOTIC</span><span class="cs-tier-n" id="cs-p2-tier">TIER 3</span></div>
+          </div>
+          <div class="cs-namebar">
+            <button class="cs-arrow" data-cs-arrow="-1" data-cs-player="p2" aria-label="Previous car">&#8249;</button>
+            <div class="cs-name"><span class="cs-brand" id="cs-p2-brand">Brand</span><span class="cs-model" id="cs-p2-model">Model</span></div>
+            <button class="cs-arrow" data-cs-arrow="1" data-cs-player="p2" aria-label="Next car">&#8250;</button>
+          </div>
+          <button class="cs-ready" id="cs-p2-ready" data-cs-ready data-cs-player="p2">PRESS &#8593;</button>
+        </footer>
+
+        <div class="cs-hint"><b>&#8592;</b>/<b>&#8594;</b> CHANGE&nbsp;&nbsp;&middot;&nbsp;&nbsp;<b>&#8593;</b> READY&nbsp;&nbsp;&middot;&nbsp;&nbsp;<b>&#8595;</b> CANCEL</div>
+      </section>
+    </div>
+
+    <!-- Loading overlay (neon racing splash). Hidden until the cars are chosen. -->
+    <div id="loading-overlay" class="hidden">
       <div class="ls-photo"></div>
       <div class="ls-vignette"></div>
 

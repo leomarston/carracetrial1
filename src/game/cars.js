@@ -22,6 +22,7 @@ export const CARS = {
   mercedes: {
     id: 'mercedes',
     name: 'Mercedes Silver Lightning',
+    brand: 'Mercedes-Benz', model: 'Silver Lightning', klass: 'EXOTIC', tier: 3, value: 225000,
     url: 'models/mercedes.glb',
     targetWidth: CAR_WIDTH,
     flip: false,
@@ -41,6 +42,7 @@ export const CARS = {
   lambo: {
     id: 'lambo',
     name: 'Koenigsegg CC850',
+    brand: 'Koenigsegg', model: 'CC850', klass: 'EXOTIC', tier: 3, value: 280000,
     url: 'models/lamborghini.glb',
     targetWidth: CAR_WIDTH * 1.15, // a little bigger than Player 1's car
     flip: false,
@@ -58,30 +60,35 @@ export const CARS = {
   //     planes hidden, wheel groups wheel(FL/FR/BL/BR)). Scaled to CAR_WIDTH. ---
   mclaren: {
     id: 'mclaren', name: 'McLaren Artura', url: 'models/mclaren.glb',
+    brand: 'McLaren', model: 'Artura', klass: 'EXOTIC', tier: 3, value: 230000,
     targetWidth: CAR_WIDTH, flip: false, mass: 1400, paintColor: 0xff5a00, // papaya orange
     stats: { speed: 10, acceleration: 9, grip: 8, braking: 8, handling: 8 },
     hideMeshes: /glows/i, wheelGroupRe: /^wheel(FL|FR|BL|BR)$/i,
   },
   audi: {
     id: 'audi', name: 'Audi R8 e-tron', url: 'models/audi.glb',
+    brand: 'Audi', model: 'R8 e-tron', klass: 'EXOTIC', tier: 2, value: 150000,
     targetWidth: CAR_WIDTH, flip: false, mass: 1600, paintColor: 0x1846a0, // blue
     stats: { speed: 9, acceleration: 9, grip: 8, braking: 8, handling: 7 },
     hideMeshes: /glows/i, wheelGroupRe: /^wheel(FL|FR|BL|BR)$/i,
   },
   dezir: {
     id: 'dezir', name: 'Renault DeZir', url: 'models/dezir.glb',
+    brand: 'Renault', model: 'DeZir', klass: 'CONCEPT', tier: 2, value: 120000,
     targetWidth: CAR_WIDTH, flip: false, mass: 1300, paintColor: 0xc01526, // red
     stats: { speed: 8, acceleration: 8, grip: 7, braking: 7, handling: 8 },
     hideMeshes: /glows/i, wheelGroupRe: /^wheel(FL|FR|BL|BR)$/i,
   },
   rs01: {
     id: 'rs01', name: 'Renault Sport R.S. 01', url: 'models/rs01.glb',
+    brand: 'Renault Sport', model: 'R.S. 01', klass: 'EXOTIC', tier: 3, value: 200000,
     targetWidth: CAR_WIDTH, flip: false, mass: 1100, paintColor: 0xf4c20a, // yellow
     stats: { speed: 9, acceleration: 9, grip: 9, braking: 9, handling: 9 },
     hideMeshes: /glows/i, wheelGroupRe: /^wheel(FL|FR|BL|BR)$/i,
   },
   honda: {
     id: 'honda', name: 'Honda Civic Type R', url: 'models/honda.glb',
+    brand: 'Honda', model: 'Civic Type R', klass: 'TUNER', tier: 1, value: 45000,
     targetWidth: CAR_WIDTH, flip: false, mass: 1400, paintColor: 0xe9ecee, // championship white
     stats: { speed: 7, acceleration: 7, grip: 7, braking: 7, handling: 8 },
     hideMeshes: /glows/i, wheelGroupRe: /^wheel(FL|FR|BL|BR)$/i,

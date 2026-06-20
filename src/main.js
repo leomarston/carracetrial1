@@ -3,15 +3,13 @@ import { Game } from './game/Game.js';
 import { CARS } from './game/cars.js';
 import { TRACKS } from './game/tracks.js';
 import { formatTime } from './game/RaceManager.js';
+import { runCarSelect } from './game/CarSelect.js';
 
 // Assets live in /public so they are served verbatim (never bundled/transformed).
 const base = import.meta.env.BASE_URL;
 const MAP_URL = `${base}models/carracemap1.glb`;
-const P1_CAR = { ...CARS.mercedes, url: `${base}${CARS.mercedes.url}` };
-const P2_CAR = { ...CARS.lambo, url: `${base}${CARS.lambo.url}` };
-// AI bots that race the loop.
-const BOT_IDS = ['mclaren', 'audi', 'rs01', 'dezir', 'honda'];
-const BOT_CARS = BOT_IDS.map((id) => ({ ...CARS[id], url: `${base}${CARS[id].url}` }));
+// Browse order on the CAR SELECT screen (all cars are selectable by either player).
+const CAR_ORDER = ['mercedes', 'lambo', 'mclaren', 'audi', 'rs01', 'dezir', 'honda'];
 const TRACK = { ...TRACKS.highway, gantry: { ...TRACKS.highway.gantry, url: `${base}${TRACKS.highway.gantry.url}` } };
 
 const NOS_C = 2 * Math.PI * 42; // nitrous-gauge ring circumference (r=42 in the SVG)
@@ -26,6 +24,25 @@ const setProgress = (pct, msg) => {
 };
 
 async function boot() {
+  // 1) CAR SELECT — both players choose before anything else loads. The two picks
+  //    become Player 1 / Player 2; the remaining cars become the AI bots.
+  const picks = await runCarSelect({
+    cars: CARS,
+    order: CAR_ORDER,
+    defaults: { p1: 'mercedes', p2: 'lambo' },
+    base,
+    root: document.getElementById('car-select'),
+  });
+  const withUrl = (id) => ({ ...CARS[id], url: `${base}${CARS[id].url}` });
+  const P1_CAR = withUrl(picks.p1);
+  const P2_CAR = withUrl(picks.p2);
+  const BOT_CARS = CAR_ORDER
+    .filter((id) => id !== picks.p1 && id !== picks.p2)
+    .slice(0, 5)
+    .map(withUrl);
+
+  // 2) Now reveal the loading screen and boot the race with the chosen cars.
+  overlay.classList.remove('hidden');
   setProgress(2, 'Initialising physics…');
   await RAPIER.init(); // load the Rapier WASM once, before any physics is created
 
