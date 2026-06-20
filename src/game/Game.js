@@ -178,7 +178,7 @@ export class Game {
    */
   async addAICar(carConfig, track) {
     const spawn = track.aiSpawn;
-    const car = new Vehicle(this.physics, carConfig);
+    const car = new Vehicle(this.physics, { ...carConfig, kinematic: true });
     await car.load(carConfig.url, spawn);
     this.scene.add(car.object3D);
     car.syncVisual(0); // place object3D at the spawn so the AI seeds its index there
@@ -377,29 +377,19 @@ export class Game {
         ? HOLD
         : { throttle: this.input.throttle, steer: this.input.steer, handbrake: this.input.handbrake });
 
+      // The AI car is kinematic: once racing, it follows the racing line. During
+      // the countdown it just sits on the grid (no pose update needed).
       if (this.ai) {
         this.ai.car.revving = holding;
-        this.ai.car.setInput(holding ? HOLD : this.ai.driver.update(dt));
-      }
-
-      // Step the physics with both vehicles inside each fixed step.
-      this.physics.step(dt, (h) => {
-        this.car.fixedUpdate(h);
-        if (this.ai) this.ai.car.fixedUpdate(h);
-      });
-      this.car.syncVisual(dt);
-      if (this.ai) {
-        this.ai.car.syncVisual(dt);
-        // Auto-rescue: if the AI gets pinned (wall/flip) for too long, drop it back
-        // onto the racing line facing forward so it always finishes the race.
-        if (this.race && this.race.phase === 'racing' && this.ai.driver.isStuck) {
-          const t = this.ai.driver.rescueTarget();
-          const y = t.y != null ? t.y : (this._sampleGroundY(t.x, t.z) ?? 0.8);
-          this.ai.car.resetTo(t.x, y, t.z, t.heading);
-          this.ai.car.syncVisual(dt);
-          this.ai.driver.onRescued();
+        if (this.race && this.race.phase !== 'countdown') {
+          this.ai.car.setKinematicPose(this.ai.driver.update(dt));
         }
       }
+
+      // Step the physics (player vehicle dynamics; the kinematic AI moves with it).
+      this.physics.step(dt, (h) => this.car.fixedUpdate(h));
+      this.car.syncVisual(dt);
+      if (this.ai) this.ai.car.syncVisual(dt);
       this.effects.update(dt);
       this.audio.update();
       if (this.race) {

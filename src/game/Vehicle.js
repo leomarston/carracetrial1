@@ -24,6 +24,10 @@ export class Vehicle {
     this.targetWidth = carConfig.targetWidth ?? 2.8;
     this.flip = carConfig.flip ?? false;
     this.mass = carConfig.mass ?? 850;
+    // Kinematic cars are moved along a path (the AI opponent) instead of being
+    // driven by raycast-vehicle physics; they still collide with/nudge the player.
+    this.kinematic = carConfig.kinematic ?? false;
+    this.kinematicSpeed = 0;
 
     // Visual root, synced from the chassis each frame (origin = chassis centre).
     this.object3D = new THREE.Group();
@@ -115,7 +119,7 @@ export class Vehicle {
 
     this._setupWheelsAndLights();
     this._createChassis(spawn);
-    this._addWheels();
+    if (!this.kinematic) this._addWheels();
     return this;
   }
 
@@ -187,6 +191,19 @@ export class Vehicle {
     const s = this.size;
     const heading = spawn.heading ?? 0;
     const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), heading);
+
+    // Kinematic chassis (AI): moved along the path; pushes the player but is never
+    // pushed itself, so it can't be knocked off the racing line.
+    if (this.kinematic) {
+      const startY = (spawn.y ?? 0) + s.y / 2;
+      const kDesc = RAPIER.RigidBodyDesc.kinematicPositionBased()
+        .setTranslation(spawn.x, startY, spawn.z)
+        .setRotation({ x: q.x, y: q.y, z: q.z, w: q.w });
+      this.chassis = this.world.createRigidBody(kDesc);
+      const hx = s.x * 0.45, hy = s.y * 0.34, hz = s.z * 0.47;
+      this.world.createCollider(RAPIER.ColliderDesc.cuboid(hx, hy, hz).setFriction(0.6), this.chassis);
+      return;
+    }
 
     // Spawn a little above the ground so the suspension settles onto the road.
     const startY = (spawn.y ?? 0) + s.y / 2 + 0.4;
@@ -308,6 +325,16 @@ export class Vehicle {
     this.controller.updateVehicle(h);
   }
 
+  /** Move a kinematic car to a pose on the racing line (AI opponent). */
+  setKinematicPose(pose) {
+    if (!this.chassis) return;
+    const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), pose.heading);
+    this.chassis.setNextKinematicTranslation({ x: pose.x, y: (pose.y ?? 0) + this.size.y / 2, z: pose.z });
+    this.chassis.setNextKinematicRotation({ x: q.x, y: q.y, z: q.z, w: q.w });
+    this.kinematicSpeed = pose.speed ?? 0;
+    if (pose.steer != null) this._steerAngle = pose.steer;
+  }
+
   /** Sync the visual model + wheels + lights from the chassis (each render frame). */
   syncVisual(dt = 1 / 60) {
     if (!this.chassis) return;
@@ -316,20 +343,26 @@ export class Vehicle {
     this.object3D.position.set(t.x, t.y, t.z);
     this.object3D.quaternion.set(r.x, r.y, r.z, r.w);
 
-    // Derived state for camera / HUD / audio.
     this._fwd.set(0, 0, 1).applyQuaternion(this.object3D.quaternion);
     this.heading = Math.atan2(this._fwd.x, this._fwd.z);
-    this.speed = this._forwardSpeed();
-    this.steer = this._steerAngle;
 
-    const lv = this.chassis.linvel();
-    const right = this._tmpV.set(1, 0, 0).applyQuaternion(this.object3D.quaternion);
-    const lateralVel = lv.x * right.x + lv.y * right.y + lv.z * right.z;
-    this.lateralSlip = Math.min(1, Math.abs(lateralVel) / 7);
-
-    let contact = 0;
-    for (let i = 0; i < this.wheels.length; i++) if (this.controller.wheelIsInContact(i)) contact++;
-    this.wheelsInContact = contact;
+    if (this.kinematic) {
+      // Path-driven: speed/steer come from the follower; no slip/contact concept.
+      this.speed = this.kinematicSpeed;
+      this.steer = this._steerAngle;
+      this.lateralSlip = 0;
+      this.wheelsInContact = 4;
+    } else {
+      this.speed = this._forwardSpeed();
+      this.steer = this._steerAngle;
+      const lv = this.chassis.linvel();
+      const right = this._tmpV.set(1, 0, 0).applyQuaternion(this.object3D.quaternion);
+      const lateralVel = lv.x * right.x + lv.y * right.y + lv.z * right.z;
+      this.lateralSlip = Math.min(1, Math.abs(lateralVel) / 7);
+      let contact = 0;
+      for (let i = 0; i < this.wheels.length; i++) if (this.controller.wheelIsInContact(i)) contact++;
+      this.wheelsInContact = contact;
+    }
 
     this._updateDrivetrain();
     this._animateWheels(dt);
@@ -394,6 +427,15 @@ export class Vehicle {
   /** Reset the car upright at a position (e.g. respawn). */
   resetTo(x, y, z, heading = 0) {
     const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), heading);
+    if (this.kinematic) {
+      const pos = { x, y: y + this.size.y / 2, z };
+      this.chassis.setTranslation(pos, true);
+      this.chassis.setRotation({ x: q.x, y: q.y, z: q.z, w: q.w }, true);
+      this.chassis.setNextKinematicTranslation(pos);
+      this.chassis.setNextKinematicRotation({ x: q.x, y: q.y, z: q.z, w: q.w });
+      this.kinematicSpeed = 0;
+      return;
+    }
     this.chassis.setTranslation({ x, y: y + this.size.y / 2 + 0.4, z }, true);
     this.chassis.setRotation({ x: q.x, y: q.y, z: q.z, w: q.w }, true);
     this.chassis.setLinvel({ x: 0, y: 0, z: 0 }, true);

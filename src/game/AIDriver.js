@@ -1,23 +1,21 @@
 import { nearestIndex } from './trackPath.js';
 
 /**
- * A simple but robust racing AI: it chases a precomputed centerline.
+ * AI opponent driver — a smooth racing-line follower.
  *
- *  - Steering: pure-pursuit toward a look-ahead point on the line (the faster it
- *    goes, the further ahead it aims → smooth, stable cornering).
- *  - Speed: every waypoint has a curvature-derived speed limit; the AI looks
- *    ahead over its braking distance, targets the slowest limit it can see, and
- *    throttles or brakes to hit it. So it slows for corners and floors the
- *    straights.
- *  - Recovery: if it gets stuck (wall, spin), it reverses and re-aims.
+ * Rather than fight raycast-vehicle physics (which spins out and beaches on this
+ * big walled circuit), the AI car is moved *kinematically* along the precomputed
+ * racing line: it advances by arc length at a speed that eases toward a
+ * curvature-derived limit (slow for corners, fast on straights). This can never
+ * spin, reverse by accident, or get stuck — it just drives the line. The car is a
+ * kinematic rigid body, so it still collides with / nudges the player.
  *
- * It only reads the vehicle's public state and emits {throttle, steer, handbrake}
- * exactly like the keyboard Controls, so the rest of the game treats it the same.
+ * `update(dt)` returns the pose to apply: { x, y, z, heading, speed, steer }.
  */
 export class AIDriver {
   /**
    * @param {import('./Vehicle.js').Vehicle} vehicle
-   * @param {{x:number,z:number}[]} waypoints ordered loop in the driving direction
+   * @param {{x:number,z:number,y?:number}[]} waypoints  ordered loop, driving dir
    * @param {object} [opts]
    */
   constructor(vehicle, waypoints, opts = {}) {
@@ -25,65 +23,56 @@ export class AIDriver {
     this.wps = waypoints;
     this.n = waypoints.length;
 
-    // Skill knobs (0..1-ish). Lower = slower/easier opponent.
-    this.skill = opts.skill ?? 1;
-    this.vmax = opts.vmax ?? vehicle.topSpeed * 0.55; // m/s the AI will chase on straights
-    this.vmin = opts.vmin ?? 12; // m/s floor through the tightest corner
-    this.lookBase = opts.lookBase ?? 16; // m look-ahead at rest
-    this.lookSpeed = opts.lookSpeed ?? 1.0; // + this * speed (m per m/s)
-    this.latAccel = opts.latAccel ?? 3.2; // m/s² lateral grip the AI assumes for corners
-    this.headGain = opts.headGain ?? 1.0; // weight on the path-heading term
-    this.crossGain = opts.crossGain ?? 1.2; // how hard it pulls back onto the line
-    this.crossSign = opts.crossSign ?? -1; // sign so the cross-track term steers toward the line
-    this.crossSoft = opts.crossSoft ?? 7; // speed-softening so it isn't violent at low speed
-    this.crossCap = opts.crossCap ?? 0.7; // rad: cross-track term alone can't hit full lock
-    this.steerSmooth = opts.steerSmooth ?? 0.25; // steer low-pass (per 1/60 s)
+    // Cumulative arc length along the loop (for arc-length parameterisation).
+    this.cum = new Array(this.n);
+    let L = 0;
+    for (let i = 0; i < this.n; i++) {
+      this.cum[i] = L;
+      const a = waypoints[i], b = waypoints[(i + 1) % this.n];
+      L += Math.hypot(b.x - a.x, b.z - a.z);
+    }
+    this.total = L;
 
-    this.i = nearestIndex(waypoints, vehicle.object3D.position.x, vehicle.object3D.position.z);
-    this._stuck = 0;
-    this._recover = 0;
-    this._caution = 0;
-    this._steer = 0;
-    this.stuckTime = 0;
-    this.airTime = 0;
+    this.skill = opts.skill ?? 1;
+    this.vmax = opts.vmax ?? vehicle.topSpeed * 0.8; // m/s on the straights
+    this.vmin = opts.vmin ?? 16; // m/s through the tightest corner
+    this.latAccel = opts.latAccel ?? 12; // m/s² cornering budget (sets corner speeds)
+    this.accel = opts.accel ?? 13; // m/s² pick-up
+    this.decel = opts.decel ?? 24; // m/s² braking
 
     this._cornerSpeed = this._computeCornerSpeeds();
+    this.startIndex = nearestIndex(waypoints, vehicle.object3D.position.x, vehicle.object3D.position.z);
+    this.reset();
   }
 
-  /** Per-waypoint speed limit from local curvature (smoothed, then forward-blurred). */
+  reset() {
+    this.dist = this.cum[this.startIndex];
+    this.speed = 0;
+    this.steer = 0;
+    this._idx = this.startIndex;
+  }
+
+  /** Per-waypoint speed limit from curvature, at two baselines (kink + sweeper). */
   _computeCornerSpeeds() {
     const n = this.n, wps = this.wps;
-
-    // Average waypoint spacing → choose a curvature baseline (~75 m each side) so
-    // long sweeping curves are detected, not just sharp single-waypoint kinks.
-    let total = 0;
-    for (let i = 0; i < n; i++) { const a = wps[i], b = wps[(i + 1) % n]; total += Math.hypot(b.x - a.x, b.z - a.z); }
-    const spacing = total / n;
-    this.loopLength = total;
-    const W = Math.max(1, Math.round(75 / spacing));
-
-    const latAccel = this.latAccel * (0.75 + 0.25 * this.skill);
-    // Two baselines: short (W) catches tight kinks, long (3W) catches sustained
-    // sweepers that read as "gentle" locally but drift the car off over their
-    // length. Take the slower of the two so long bends are respected.
+    const spacing = this.total / n;
+    const W = Math.max(1, Math.round(70 / spacing));
+    const lat = this.latAccel * (0.7 + 0.3 * this.skill);
     const speedAt = (i, half) => {
       const a = wps[(i - half + n) % n], b = wps[i], c = wps[(i + half) % n];
-      const ax = b.x - a.x, az = b.z - a.z;
-      const bx = c.x - b.x, bz = c.z - b.z;
+      const ax = b.x - a.x, az = b.z - a.z, bx = c.x - b.x, bz = c.z - b.z;
       const la = Math.hypot(ax, az) || 1, lb = Math.hypot(bx, bz) || 1;
       let dot = (ax * bx + az * bz) / (la * lb);
       dot = Math.max(-1, Math.min(1, dot));
       const turn = Math.acos(dot);
-      const arc = (la + lb) / 2;
-      const radius = turn > 1e-3 ? arc / turn : 1e6;
-      return Math.sqrt(latAccel * radius);
+      const radius = turn > 1e-3 ? ((la + lb) / 2) / turn : 1e6;
+      return Math.sqrt(lat * radius);
     };
     const raw = new Array(n);
     for (let i = 0; i < n; i++) {
-      const v = Math.min(speedAt(i, W), speedAt(i, 3 * W));
-      raw[i] = Math.max(this.vmin, Math.min(this.vmax, v));
+      raw[i] = Math.max(this.vmin, Math.min(this.vmax, Math.min(speedAt(i, W), speedAt(i, 3 * W))));
     }
-    // Min-smooth so a corner's limit applies a little before/after its apex.
+    // Min-smooth so the limit applies a little before/after the apex.
     const out = new Array(n);
     for (let i = 0; i < n; i++) {
       let m = Infinity;
@@ -93,127 +82,64 @@ export class AIDriver {
     return out;
   }
 
-  reset() {
-    this.i = nearestIndex(this.wps, this.car.object3D.position.x, this.car.object3D.position.z);
-    this._stuck = 0;
-    this._recover = 0;
-    this._caution = 0;
-    this._steer = 0;
-    this.stuckTime = 0;
-    this.airTime = 0;
+  /** Waypoint index at arc-length d (advances the cached cursor). */
+  _indexAt(d) {
+    let i = this._idx;
+    // step forward while the next waypoint is still behind d
+    for (let s = 0; s < this.n; s++) {
+      const next = (i + 1) % this.n;
+      const cNext = next === 0 ? this.total : this.cum[next];
+      if (d < cNext) break;
+      i = next;
+    }
+    this._idx = i;
+    return i;
   }
 
-  /** Pinned (low speed) OR fallen off (airborne) for too long → auto-rescue. */
-  get isStuck() { return this.stuckTime > 4 || this.airTime > 1.5; }
-
-  /** Where to drop the car for a rescue: on the line a couple of points AHEAD
-   *  (so it skips past whatever trapped it), facing along the track. */
-  rescueTarget() {
-    const n = this.n, idx = (this.i + 2) % n, wp = this.wps[idx], aim = this.wps[(idx + 3) % n];
-    return { x: wp.x, y: wp.y, z: wp.z, heading: Math.atan2(aim.x - wp.x, aim.z - wp.z) };
+  /** Interpolated pose (x, y, z, heading) at arc-length d. */
+  _poseAt(d) {
+    const n = this.n, i = this._indexAt(d), j = (i + 1) % n;
+    const a = this.wps[i], b = this.wps[j];
+    const segLen = (j === 0 ? this.total : this.cum[j]) - this.cum[i] || 1;
+    const f = Math.max(0, Math.min(1, (d - this.cum[i]) / segLen));
+    const x = a.x + (b.x - a.x) * f;
+    const z = a.z + (b.z - a.z) * f;
+    const ay = a.y ?? 0, by = b.y ?? ay;
+    const y = ay + (by - ay) * f;
+    return { x, y, z, i };
   }
 
-  /** Called by the game after it has repositioned the car onto the line. */
-  onRescued() {
-    this.i = (this.i + 2) % this.n;
-    this.stuckTime = 0; this.airTime = 0; this._stuck = 0; this._recover = 0; this._caution = 2.5; this._steer = 0;
-  }
-
-  /** @returns {{throttle:number, steer:number, handbrake:boolean}} */
+  /** @returns {{x,y,z,heading,speed,steer}} pose to apply to the kinematic car. */
   update(dt) {
-    const car = this.car;
-    const p = car.object3D.position;
-    const speed = car.speed; // signed forward m/s
-    const n = this.n, wps = this.wps;
-    this.stuckTime = Math.abs(speed) < 2 ? this.stuckTime + dt : 0;
-    this.airTime = car.wheelsInContact === 0 ? this.airTime + dt : 0;
-
-    // Advance our index to the nearest waypoint within a local window. If we've
-    // somehow desynced (big crash / spin) and the nearest is far, rescan fully.
-    this.i = nearestIndex(wps, p.x, p.z, this.i, 16);
-    const near = wps[this.i];
-    if ((near.x - p.x) ** 2 + (near.z - p.z) ** 2 > 60 * 60) {
-      this.i = nearestIndex(wps, p.x, p.z);
-    }
-
-    // --- Steering: a Stanley-style controller that converges to the line, so on
-    //     a straight the steer returns to ~0 (no constant scrub). It blends a
-    //     heading term (aim where the line is going, look-ahead so it anticipates
-    //     corners) with a cross-track term (pull back onto the line). ---
-    // Look-ahead point gives the path heading to aim at.
-    const Ld = this.lookBase + this.lookSpeed * Math.max(0, speed);
-    let acc = 0, j = this.i, prev = wps[this.i];
-    while (acc < Ld) {
-      const nx = wps[(j + 1) % n];
-      acc += Math.hypot(nx.x - prev.x, nx.z - prev.z);
-      prev = nx; j = (j + 1) % n;
-    }
-    const ahead = prev;
-    const pathHeading = Math.atan2(ahead.x - p.x, ahead.z - p.z);
-    let headErr = wrap(pathHeading - car.heading);
-
-    // Cross-track: signed perpendicular offset from the line tangent at our index.
-    const a0 = wps[this.i], b0 = wps[(this.i + 1) % n];
-    const tx = b0.x - a0.x, tz = b0.z - a0.z;
-    const tl = Math.hypot(tx, tz) || 1;
-    const cross = ((p.x - a0.x) * tz - (p.z - a0.z) * tx) / tl; // + = one side, − = other
-    let crossTerm = Math.atan2(this.crossGain * cross, this.crossSoft + Math.abs(speed));
-    crossTerm = Math.max(-this.crossCap, Math.min(this.crossCap, crossTerm)); // never full-lock alone
-
-    // steerAngle in radians → normalise to the car's lock; smooth to kill jitter.
-    const steerAngle = headErr * this.headGain + crossTerm * this.crossSign;
-    const rawSteer = Math.max(-1, Math.min(1, steerAngle / this.car.maxSteerAngle));
-    this._steer += (rawSteer - this._steer) * Math.min(1, this.steerSmooth * dt * 60);
-    if (Math.abs(this._steer) < 0.02) this._steer = 0; // deadzone → no idle scrub
-
-    // --- Target speed: slowest corner limit within braking distance (brake early) ---
-    const brakeDist = 16 + (speed * speed) / 6; // rough v²/2a look-ahead
-    let limit = this._cornerSpeed[this.i % n];
-    let d = 0, k = this.i;
+    // Target speed: the slowest corner limit within our braking distance.
+    const i = this._indexAt(this.dist);
+    const brakeDist = 10 + (this.speed * this.speed) / (2 * this.decel);
+    let target = this._cornerSpeed[i];
+    let d = 0, k = i;
     while (d < brakeDist) {
-      limit = Math.min(limit, this._cornerSpeed[k % n]);
-      const a = wps[k % n], b = wps[(k + 1) % n];
+      target = Math.min(target, this._cornerSpeed[k % this.n]);
+      const a = this.wps[k % this.n], b = this.wps[(k + 1) % this.n];
       d += Math.hypot(b.x - a.x, b.z - a.z);
       k++;
     }
-    let targetSpeed = limit * (0.9 + 0.1 * this.skill);
 
-    let throttle, handbrake = false;
+    // Ease speed toward the target (accel/brake limited) and advance along the line.
+    if (this.speed < target) this.speed = Math.min(target, this.speed + this.accel * dt);
+    else this.speed = Math.max(target, this.speed - this.decel * dt);
+    this.dist = (this.dist + this.speed * dt) % this.total;
 
-    // --- Stuck / recovery: reverse-and-reaim, then crawl out. _recover is clamped
-    //     at 0 so the stuck timer can always re-arm (a negative value reads as
-    //     truthy and would wedge the car forever). After backing up we enter a
-    //     brief "caution" so it eases past the trouble spot instead of flooring
-    //     it back into the same wall. ---
-    if (this._recover > 0) {
-      this._recover = Math.max(0, this._recover - dt);
-      this._steer = Math.max(-1, Math.min(1, -headErr)); // reverse → invert steer to re-aim
-      if (this._recover === 0) this._caution = 3.5;
-      return { throttle: -1, steer: this._steer, handbrake: false };
-    }
-    if (Math.abs(speed) < 1.5) this._stuck += dt; else this._stuck = 0;
-    if (this._stuck > 1.2) { this._recover = 1.2; this._stuck = 0; }
-    if (this._caution > 0) { this._caution = Math.max(0, this._caution - dt); targetSpeed = Math.min(targetSpeed, 13); }
+    // Pose now, and a look-ahead point to derive a smooth heading.
+    const here = this._poseAt(this.dist);
+    const ahead = this._poseAt((this.dist + Math.max(6, this.speed * 0.3)) % this.total);
+    const heading = Math.atan2(ahead.x - here.x, ahead.z - here.z);
 
-    if (speed < targetSpeed) {
-      throttle = 1;
-    } else {
-      // Over the limit: lift / brake proportional to the overshoot.
-      const over = (speed - targetSpeed) / Math.max(6, targetSpeed);
-      throttle = over > 0.12 ? -1 : 0;
-    }
-    // Ease throttle when cranking the wheel hard so it doesn't power-spin.
-    if (throttle > 0 && Math.abs(this._steer) > 0.7) throttle = 0.6;
+    // Visual steer: ease toward the heading change rate (just for the front wheels).
+    let dh = heading - (this._lastHeading ?? heading);
+    dh = Math.atan2(Math.sin(dh), Math.cos(dh));
+    this._lastHeading = heading;
+    const targetSteer = Math.max(-0.5, Math.min(0.5, dh / Math.max(dt, 1e-3) * 0.25));
+    this.steer += (targetSteer - this.steer) * Math.min(1, 6 * dt);
 
-    // Running wide: if we're off the line (understeering toward a wall), lift and
-    // then brake so the car scrubs speed and can turn back — this is what stops it
-    // ploughing into the outside of corners in the narrow walled lanes.
-    const off = Math.abs(cross);
-    if (off > 4) throttle = Math.min(throttle, 0);
-    if (off > 6 && speed > this.vmin) throttle = -1;
-
-    return { throttle, steer: this._steer, handbrake };
+    return { x: here.x, y: here.y, z: here.z, heading, speed: this.speed, steer: this.steer };
   }
 }
-
-function wrap(a) { return Math.atan2(Math.sin(a), Math.cos(a)); }

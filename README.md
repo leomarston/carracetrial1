@@ -29,15 +29,17 @@ A 3D car racing game built with [Three.js](https://threejs.org/), the
   full ~360° around the loop (no cheating, no hand-placed checkpoints). `R`
   restarts the race.
 - **AI opponent (done).** A second car (the Koenigsegg) races you around the same
-  2 laps, driven by `src/game/AIDriver.js`. It follows a **racing line generated
-  from the road itself** (`trackPath.js` samples the road surface, takes the
-  middle line around the loop, and shifts it onto the player's carriageway) using
-  a Stanley-style controller — heading + cross-track to hug the line — with
-  **curvature-based braking** (it lifts/brakes for corners and floors the
-  straights) and a stuck-recovery. Live **race position** (P1/P2) shows in the
-  HUD and both cars appear on the minimap (you = blue, rival = orange); the finish
-  banner shows **YOU WIN / YOU LOSE**. The rival is a different car (grippier,
-  planted) so the F1 is faster on top end but trickier — a fair, beatable race.
+  2 laps. It follows a **racing line generated from the road itself**
+  (`trackPath.js` samples the road surface, takes the middle line around the loop,
+  and shifts it onto the player's carriageway, staying on-road). The car is driven
+  **kinematically along that line** (`AIDriver.js`): it advances by arc length at a
+  speed that eases toward a **curvature-derived limit** — slow for corners, fast on
+  the straights — so it never spins, reverses or beaches on this big walled
+  circuit, yet (being a kinematic rigid body) it still collides with and nudges
+  the player. Live **race position** (P1/P2) shows in the HUD and both cars appear
+  on the minimap (you = blue, rival = orange); the finish banner shows **YOU WIN /
+  YOU LOSE**. The rival tops out a bit below the F1, so you can out-drag it on the
+  straights — a fair, beatable race.
 
 ## Getting started
 
