@@ -85,9 +85,18 @@ export class Vehicle {
     this._q2 = new THREE.Quaternion();
   }
 
-  async load(url, spawn) {
-    const gltf = await new Promise((res, rej) => new GLTFLoader().load(url, res, undefined, rej));
-    const model = gltf.scene;
+  /**
+   * @param {string|import('three').Object3D} source  a GLB url, or a preloaded
+   *   (cloned) scene from carAssets — the latter avoids re-fetching/re-parsing.
+   */
+  async load(source, spawn) {
+    let model;
+    if (source && source.isObject3D) {
+      model = source;
+    } else {
+      const gltf = await new Promise((res, rej) => new GLTFLoader().load(source, res, undefined, rej));
+      model = gltf.scene;
+    }
 
     // Drop decorative meshes (e.g. emissive glow billboards) before measuring so
     // they neither float around the car nor inflate the bounding box / wheelbase.

@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { getCarScene } from './carAssets.js';
 
 /**
  * Pre-race CAR SELECT screen (NFS-style), split horizontally so both players
@@ -42,6 +43,8 @@ class CarSelect {
   }
 
   run() {
+    this.root.style.display = 'block'; // revealed now (it stays hidden during loading)
+    this.root.classList.remove('hidden');
     this._buildScene();
     this._collectDom();
     this._bindInput();
@@ -134,8 +137,12 @@ class CarSelect {
   async _getModel(id) {
     if (this.cache.has(id)) return this.cache.get(id);
     const cfg = this.cars[id];
-    const gltf = await new Promise((res, rej) => this.loader.load(this.base + cfg.url, res, undefined, rej));
-    const model = gltf.scene;
+    // Use the preloaded model (instant); only hit the network if it wasn't preloaded.
+    let model = getCarScene(id);
+    if (!model) {
+      const gltf = await new Promise((res, rej) => this.loader.load(this.base + cfg.url, res, undefined, rej));
+      model = gltf.scene;
+    }
 
     if (cfg.hideMeshes) {
       const drop = [];

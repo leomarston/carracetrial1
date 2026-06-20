@@ -419,6 +419,7 @@ body {
   overflow: hidden;
   background: #04070c;
   transition: opacity 0.5s ease;
+  display: none; /* shown by CarSelect.run() once the picker actually starts */
 }
 #car-select.hidden { opacity: 0; pointer-events: none; }
 

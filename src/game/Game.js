@@ -10,6 +10,7 @@ import { AudioManager } from './AudioManager.js';
 import { RaceManager } from './RaceManager.js';
 import { Minimap } from './Minimap.js';
 import { AIDriver } from './AIDriver.js';
+import { getCarScene } from './carAssets.js';
 import { buildCenterline, roadSamplesFromMeshes, nearestIndex } from './trackPath.js';
 import { PhysicsWorld, buildTrimeshFromMeshes } from '../physics/PhysicsWorld.js';
 import { buildRoadEdgeWalls } from '../physics/roadWalls.js';
@@ -137,7 +138,7 @@ export class Game {
    */
   async addCar(carConfig, spawn) {
     const car = new Vehicle(this.physics, carConfig);
-    await car.load(carConfig.url, spawn);
+    await car.load(getCarScene(carConfig.id) || carConfig.url, spawn);
     this.scene.add(car.object3D);
 
     this.car = car;
@@ -172,7 +173,7 @@ export class Game {
    */
   async addPlayer2(carConfig, spawn) {
     const car = new Vehicle(this.physics, carConfig);
-    await car.load(carConfig.url, spawn);
+    await car.load(getCarScene(carConfig.id) || carConfig.url, spawn);
     this.scene.add(car.object3D);
 
     this.car2 = car;
@@ -290,7 +291,7 @@ export class Game {
     for (let i = 0; i < carConfigs.length; i++) {
       const spawn = spawns[i] ?? spawns[spawns.length - 1] ?? track.p2Spawn;
       const car = new Vehicle(this.physics, { ...carConfigs[i], kinematic: true });
-      await car.load(carConfigs[i].url, spawn);
+      await car.load(getCarScene(carConfigs[i].id) || carConfigs[i].url, spawn);
       this.scene.add(car.object3D);
       car.syncVisual(0); // place object3D at the spawn so the driver seeds its index
       const driver = new AIDriver(car, waypoints, {

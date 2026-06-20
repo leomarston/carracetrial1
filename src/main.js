@@ -5,6 +5,7 @@ import { TRACKS } from './game/tracks.js';
 import { formatTime } from './game/RaceManager.js';
 import { runCarSelect } from './game/CarSelect.js';
 import { runMainMenu } from './game/MainMenu.js';
+import { preloadCars } from './game/carAssets.js';
 
 // Assets live in /public so they are served verbatim (never bundled/transformed).
 const base = import.meta.env.BASE_URL;
@@ -28,8 +29,33 @@ async function boot() {
   // 0) MAIN MENU — the very first screen. Resolves when the player picks RACE.
   await runMainMenu({ root: document.getElementById('main-menu') });
 
-  // 1) CAR SELECT — both players choose before anything else loads. The two picks
-  //    become Player 1 / Player 2; the remaining cars become the AI bots.
+  // 1) LOADING — after RACE is clicked. Everything heavy loads here: physics,
+  //    ALL car models (into a shared cache), the map and the gantry. This is why
+  //    car select is instant and the race starts immediately after the picks.
+  overlay.classList.remove('hidden');
+  setProgress(3, 'Initialising physics…');
+  await RAPIER.init(); // load the Rapier WASM once, before any physics is created
+
+  setProgress(6, 'Loading cars…');
+  await preloadCars(
+    CAR_ORDER.map((id) => ({ id, url: `${base}${CARS[id].url}` })),
+    (frac) => setProgress(6 + frac * 24, 'Loading cars…'), // 6 → 30 %
+  );
+
+  const game = new Game(document.getElementById('app'));
+  await game.loadMap(MAP_URL, (pct, loaded, total) => {
+    setProgress(30 + pct * 0.5, total > 0 // 30 → 80 %
+      ? `Loading map… ${(loaded / 1e6).toFixed(1)} / ${(total / 1e6).toFixed(1)} MB`
+      : `Loading map… ${(loaded / 1e6).toFixed(1)} MB`);
+  });
+
+  setProgress(84, 'Placing start/finish line…');
+  await game.addStartFinishGantry(TRACK.gantry);
+  game._buildRacingLine(TRACK); // cache the AI line now (used by bots + wrong-way)
+  setProgress(90, 'Choose your car…');
+
+  // 2) CAR SELECT — instant, since every model is already cached. The loading
+  //    overlay just waits behind this screen until both players lock in.
   const picks = await runCarSelect({
     cars: CARS,
     order: CAR_ORDER,
@@ -37,41 +63,20 @@ async function boot() {
     base,
     root: document.getElementById('car-select'),
   });
+
+  // 3) Spawn the chosen cars + the remaining cars as bots — all from the cache,
+  //    so this is near-instant (no network).
+  setProgress(93, 'Starting race…');
   const withUrl = (id) => ({ ...CARS[id], url: `${base}${CARS[id].url}` });
-  const P1_CAR = withUrl(picks.p1);
-  const P2_CAR = withUrl(picks.p2);
-  const BOT_CARS = CAR_ORDER
-    .filter((id) => id !== picks.p1 && id !== picks.p2)
-    .slice(0, 5)
-    .map(withUrl);
-
-  // 2) Now reveal the loading screen and boot the race with the chosen cars.
-  overlay.classList.remove('hidden');
-  setProgress(2, 'Initialising physics…');
-  await RAPIER.init(); // load the Rapier WASM once, before any physics is created
-
-  const game = new Game(document.getElementById('app'));
-  game.start();
-
-  // The whole load drives one bar: map 5→50 %, then each car, gantry, ready.
-  const stats = await game.loadMap(MAP_URL, (pct, loaded, total) => {
-    setProgress(5 + pct * 0.45, total > 0
-      ? `Loading map… ${(loaded / 1e6).toFixed(1)} / ${(total / 1e6).toFixed(1)} MB`
-      : `Loading map… ${(loaded / 1e6).toFixed(1)} MB`);
-  });
-
-  setProgress(54, 'Loading Player 1 car…');
-  await game.addCar(P1_CAR, TRACK.spawn);
-
-  setProgress(62, 'Loading Player 2 car…');
-  await game.addPlayer2(P2_CAR, TRACK.p2Spawn);
-
-  setProgress(68, 'Loading bots…');
-  await game.addBots(BOT_CARS, TRACK);
-
-  setProgress(94, 'Placing start/finish line…');
-  await game.addStartFinishGantry(TRACK.gantry);
+  await game.addCar(withUrl(picks.p1), TRACK.spawn);
+  await game.addPlayer2(withUrl(picks.p2), TRACK.p2Spawn);
+  setProgress(97);
+  await game.addBots(
+    CAR_ORDER.filter((id) => id !== picks.p1 && id !== picks.p2).slice(0, 5).map(withUrl),
+    TRACK,
+  );
   game.setupRace(TRACK, document.getElementById('minimap'));
+  game.start();
 
   setProgress(100, 'Ready');
   overlay.classList.add('hidden');
