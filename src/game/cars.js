@@ -19,6 +19,28 @@ export const CARS = {
     flip: true,
     mass: 800,
     stats: { speed: 10, acceleration: 9, grip: 3, braking: 9, handling: 3 },
+    // Visual rig: which meshes are the tyres (spun/steered) and the brake lights.
+    wheelMeshRe: /^WheelFront00[0-3]_black/,
+    brakeLights: [{ mat: 'glossyorange' }, { mat: 'BackLight', maxVerts: 100 }],
+  },
+
+  // The AI opponent. The asset (lamborghini.glb) is actually a Koenigsegg CC850
+  // by amogusstrikesback2 (CC-BY-4.0). It's already in real-world metres and its
+  // nose points +Z, so no flip; the emissive "_glows" billboard planes (one juts
+  // ~1.9 m past the nose) are hidden so they don't float or skew sizing.
+  lambo: {
+    id: 'lambo',
+    name: 'Koenigsegg CC850',
+    url: 'models/lamborghini.glb',
+    targetWidth: 2.5,
+    flip: false,
+    mass: 1200,
+    // Grippy and planted (a Koenigsegg): the AI can carry corner speed cleanly.
+    // The player's F1 is faster on top end but twitchy — a fair, beatable race.
+    stats: { speed: 9, acceleration: 8, grip: 8, braking: 8, handling: 8 },
+    hideMeshes: /glows/i,
+    // Each wheel is a group node (wheelFL/FR/BL/BR) holding its rim + tyre.
+    wheelGroupRe: /^wheel(FL|FR|BL|BR)$/i,
   },
 };
 

@@ -85,6 +85,15 @@ export class Vehicle {
     const gltf = await new Promise((res, rej) => new GLTFLoader().load(url, res, undefined, rej));
     const model = gltf.scene;
 
+    // Drop decorative meshes (e.g. emissive glow billboards) before measuring so
+    // they neither float around the car nor inflate the bounding box / wheelbase.
+    if (this.config.hideMeshes) {
+      const re = this.config.hideMeshes;
+      const drop = [];
+      model.traverse((o) => { if (o.isMesh && re.test(o.name)) drop.push(o); });
+      for (const m of drop) m.removeFromParent();
+    }
+
     // Scale by width (native.x), recenter so wheels sit at y=0 & centred, flip nose.
     model.updateWorldMatrix(true, true);
     const native = new THREE.Box3().setFromObject(model).getSize(new THREE.Vector3());
@@ -110,51 +119,60 @@ export class Vehicle {
     return this;
   }
 
-  /** Find the 4 tyre meshes (to spin/steer) and the brake-light materials. */
+  /** Find the 4 wheels (to spin/steer) and the brake-light materials. */
   _setupWheelsAndLights() {
     this.object3D.updateWorldMatrix(true, true);
 
-    // Brake lights. NOTE: the big body shell uses the (misnamed) 'BackLight'
-    // material, so we must NOT emit on it. Only the small rear-light meshes
-    // (tiny 'BackLight' meshes) and the red 'glossyorange' accent should glow —
-    // and we clone their materials so emitting doesn't tint the shared body.
+    // Brake lights (config-driven). We clone the matched materials so lighting
+    // them up doesn't tint any body mesh that shares the same material. A matcher
+    // may cap vertex count to avoid a big shell that reuses a light's material.
     this._brakeMats = [];
-    this.model.traverse((o) => {
-      if (!o.isMesh || Array.isArray(o.material)) return;
-      const name = o.material.name;
-      const verts = o.geometry.attributes.position.count;
-      const isLight = (name === 'BackLight' && verts < 100) || name === 'glossyorange';
-      if (!isLight) return;
-      const mat = o.material.clone();
-      if (!mat.emissive) mat.emissive = new THREE.Color(0x000000);
-      mat.emissiveIntensity = 0;
-      o.material = mat;
-      this._brakeMats.push(mat);
-    });
+    const matchers = this.config.brakeLights || [];
+    if (matchers.length) {
+      this.model.traverse((o) => {
+        if (!o.isMesh || Array.isArray(o.material)) return;
+        const name = o.material.name;
+        const verts = o.geometry.attributes.position.count;
+        const ok = matchers.some((m) => m.mat === name && (m.maxVerts == null || verts < m.maxVerts));
+        if (!ok) return;
+        const mat = o.material.clone();
+        if (!mat.emissive) mat.emissive = new THREE.Color(0x000000);
+        mat.emissiveIntensity = 0;
+        o.material = mat;
+        this._brakeMats.push(mat);
+      });
+    }
 
-    // The 4 tyres are the *_black_0 meshes under WheelFront000..003.
-    const tyres = [];
-    this.model.traverse((o) => { if (o.isMesh && /^WheelFront00[0-3]_black/.test(o.name)) tyres.push(o); });
-    if (tyres.length !== 4) return; // degrade gracefully (no wheel animation)
+    // Wheels: prefer named group nodes (each holds a rim + tyre, e.g. the
+    // Koenigsegg's wheelFL/FR/BL/BR) so rim and tyre spin together; otherwise
+    // fall back to individual tyre meshes (the F1's WheelFront00x meshes).
+    const roots = [];
+    if (this.config.wheelGroupRe) {
+      const re = this.config.wheelGroupRe;
+      this.model.traverse((o) => { if (re.test(o.name)) roots.push(o); });
+    } else if (this.config.wheelMeshRe) {
+      const re = this.config.wheelMeshRe;
+      this.model.traverse((o) => { if (o.isMesh && re.test(o.name)) roots.push(o); });
+    }
+    if (roots.length !== 4) return; // degrade gracefully (no wheel animation)
 
     const objQuat = this.object3D.getWorldQuaternion(new THREE.Quaternion());
     const lateralWorld = new THREE.Vector3(1, 0, 0).applyQuaternion(objQuat);
     const upWorld = new THREE.Vector3(0, 1, 0).applyQuaternion(objQuat);
     const objInv = this.object3D.matrixWorld.clone().invert();
+    const wc = new THREE.Vector3();
 
-    for (const W of tyres) {
-      W.geometry.computeBoundingBox();
-      const centerMesh = W.geometry.boundingBox.getCenter(new THREE.Vector3());
-      const P = W.parent;
-      // Wheel centre in object-local space → front/rear by z sign.
-      const wWorld = centerMesh.clone().applyMatrix4(W.matrixWorld);
-      const isFront = wWorld.clone().applyMatrix4(objInv).z > 0;
+    for (const root of roots) {
+      // World centre of the wheel → front/rear by local z sign.
+      new THREE.Box3().setFromObject(root).getCenter(wc);
+      const isFront = wc.clone().applyMatrix4(objInv).z > 0;
       // Pivot at the wheel centre so spin/steer rotate it in place.
-      const centerInP = centerMesh.clone().applyMatrix4(W.matrix);
+      const P = root.parent;
+      const centerInP = wc.clone().applyMatrix4(P.matrixWorld.clone().invert());
       const pivot = new THREE.Group();
       pivot.position.copy(centerInP);
       P.add(pivot);
-      pivot.attach(W); // keep world transform, reparent under pivot
+      pivot.attach(root); // keep world transform, reparent under pivot
       const pInv = P.getWorldQuaternion(new THREE.Quaternion()).invert();
       this._wheelPivots.push({
         pivot,

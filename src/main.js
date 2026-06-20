@@ -8,6 +8,7 @@ import { formatTime } from './game/RaceManager.js';
 const base = import.meta.env.BASE_URL;
 const MAP_URL = `${base}models/carracemap1.glb`;
 const CAR = { ...CARS.f1, url: `${base}${CARS.f1.url}` };
+const AI_CAR = { ...CARS.lambo, url: `${base}${CARS.lambo.url}` };
 const TRACK = { ...TRACKS.highway, gantry: { ...TRACKS.highway.gantry, url: `${base}${TRACKS.highway.gantry.url}` } };
 const CAR_SPAWN = TRACK.spawn;
 
@@ -38,6 +39,9 @@ async function boot() {
   status.textContent = 'Loading car…';
   const car = await game.addCar(CAR, CAR_SPAWN);
 
+  status.textContent = 'Loading rival…';
+  await game.addAICar(AI_CAR, TRACK);
+
   status.textContent = 'Placing start/finish line…';
   await game.addStartFinishGantry(TRACK.gantry);
   game.setupRace(TRACK, document.getElementById('minimap'));
@@ -51,6 +55,7 @@ async function boot() {
 
   mapStatsEl.innerHTML = [
     `<strong>${stats.title}</strong>`,
+    `Race the <b>${AI_CAR.name}</b> — 2 laps, beat the AI!`,
     `<b>W/A/S/D</b> drive · <b>Space</b> handbrake · <b>R</b> restart · <b>C</b> free cam`,
   ].join('<br/>');
 
@@ -59,6 +64,7 @@ async function boot() {
   // HUD: speedometer / gear / tach + race (laps & timing).
   const gearEl = document.getElementById('gear');
   const rpmBar = document.getElementById('rpm-bar');
+  const posEl = document.getElementById('position');
   const lapEl = document.getElementById('lap-count');
   const curEl = document.getElementById('lap-time');
   const bestEl = document.getElementById('best-time');
@@ -73,6 +79,8 @@ async function boot() {
       rpmBar.style.width = `${Math.min(100, (c.rpm / c.engine.redline) * 100).toFixed(0)}%`;
     }
     if (r) {
+      posEl.innerHTML = `P${r.position}<span class="pos-total">/${r.totalCars}</span>`;
+      posEl.classList.toggle('leading', r.position === 1);
       lapEl.textContent = `LAP ${r.currentLap}/${r.totalLaps}`;
       curEl.textContent = r.started ? formatTime(r.lapTime) : '—';
       bestEl.textContent = r.bestLap ? `best ${formatTime(r.bestLap)}` : '';
@@ -94,6 +102,13 @@ async function boot() {
       }
 
       if (r.finished && banner.classList.contains('hidden')) {
+        const won = r.playerWon;
+        const title = banner.querySelector('.fb-title');
+        title.textContent = won ? 'YOU WIN! 🏆' : 'YOU LOSE 🏁';
+        title.classList.toggle('lose', !won);
+        banner.querySelector('.result').textContent = won
+          ? `P1 of ${r.totalCars} — beat the ${AI_CAR.name}`
+          : `P${r.position} of ${r.totalCars} — the ${AI_CAR.name} took it`;
         banner.querySelector('.total').textContent = formatTime(r.raceTime);
         banner.querySelector('.best').textContent = r.bestLap ? `Best lap ${formatTime(r.bestLap)}` : '';
         banner.classList.remove('hidden');

@@ -9,6 +9,8 @@ import { Effects } from './Effects.js';
 import { AudioManager } from './AudioManager.js';
 import { RaceManager } from './RaceManager.js';
 import { Minimap } from './Minimap.js';
+import { AIDriver } from './AIDriver.js';
+import { buildCenterline, roadSamplesFromMeshes } from './trackPath.js';
 import { PhysicsWorld, buildTrimeshFromMeshes } from '../physics/PhysicsWorld.js';
 import { buildRoadEdgeWalls } from '../physics/roadWalls.js';
 
@@ -156,10 +158,46 @@ export class Game {
       if (k === 'c') this.setDriving(!this.driving);
       if (k === 'r' && this.car) {
         this.car.resetTo(spawn.x, spawn.y ?? 0, spawn.z, spawn.heading ?? 0);
+        if (this.ai) {
+          const a = this.ai.spawn;
+          this.ai.car.resetTo(a.x, a.y ?? 0, a.z, a.heading ?? 0);
+          this.ai.driver.reset();
+        }
         if (this.race) this.race.reset();
       }
       if (k === 'p') { this.debugPhysics = !this.debugPhysics; this.physics.setDebug(this.scene, this.debugPhysics); }
     });
+    return car;
+  }
+
+  /**
+   * Load the AI opponent: a second physics vehicle that follows a racing line
+   * derived from the road (the centerline around the loop centre).
+   * @param {object} carConfig  entry from cars.js (with a resolved `url`)
+   * @param {object} track      the track def (for spawn/loopCenter/path)
+   */
+  async addAICar(carConfig, track) {
+    const spawn = track.aiSpawn;
+    const car = new Vehicle(this.physics, carConfig);
+    await car.load(carConfig.url, spawn);
+    this.scene.add(car.object3D);
+    car.syncVisual(0); // place object3D at the spawn so the AI seeds its index there
+
+    // Build the racing line from the same road meshes the walls/minimap use.
+    const roads = (this.mapMeshes ?? []).filter((m) => /Road2/i.test(m.name));
+    const samples = roadSamplesFromMeshes(roads);
+    const c = track.loopCenter;
+    const seedRadius = Math.hypot(track.spawn.x - c.x, track.spawn.z - c.z);
+    const seedAngle = Math.atan2(track.spawn.z - c.z, track.spawn.x - c.x);
+    const waypoints = buildCenterline(samples, {
+      center: c, seedRadius, seedAngle,
+      bins: track.path?.bins ?? 240, dir: track.path?.dir ?? -1,
+      gap: track.path?.gap, laneOffset: track.path?.laneOffset,
+    });
+    this.aiWaypoints = waypoints;
+
+    const driver = new AIDriver(car, waypoints, { skill: carConfig.aiSkill ?? 1 });
+    this.ai = { car, driver, spawn };
     return car;
   }
 
@@ -172,9 +210,11 @@ export class Game {
     }
   }
 
-  /** Set up the race (lap logic) + minimap for a track. Call after addCar. */
+  /** Set up the race (lap logic) + minimap for a track. Call after addCar (+ addAICar). */
   setupRace(track, minimapCanvas) {
-    this.race = new RaceManager(this.car, track);
+    const entries = [{ car: this.car, name: this.car.name, isPlayer: true }];
+    if (this.ai) entries.push({ car: this.ai.car, name: this.ai.car.name, isPlayer: false });
+    this.race = new RaceManager(track, entries);
     if (minimapCanvas) {
       const roads = (this.mapMeshes ?? []).filter((m) => /Road2/i.test(m.name));
       this.minimap = new Minimap(minimapCanvas, roads, track);
@@ -242,6 +282,32 @@ export class Game {
     }
   }
 
+  /** Debug: drivable road x-spans at a given z (downward raycasts vs road meshes). */
+  roadSpansAt(z, x0 = -1600, x1 = 2340, step = 2) {
+    const roads = (this.mapMeshes ?? []).filter((m) => /Road2/i.test(m.name));
+    if (!this._ray) this._ray = new THREE.Raycaster();
+    const spans = [];
+    let open = null;
+    for (let x = x0; x <= x1; x += step) {
+      this._ray.set(new THREE.Vector3(x, 500, z), new THREE.Vector3(0, -1, 0));
+      this._ray.far = 1000;
+      const hit = this._ray.intersectObjects(roads, false).length > 0;
+      if (hit && open === null) open = x;
+      else if (!hit && open !== null) { spans.push([open, x - step]); open = null; }
+    }
+    if (open !== null) spans.push([open, x1]);
+    return spans;
+  }
+
+  /** Debug: is (x,z) over the road? (downward raycast vs road meshes). */
+  pointOnRoad(x, z) {
+    const roads = (this.mapMeshes ?? []).filter((m) => /Road2/i.test(m.name));
+    if (!this._ray) this._ray = new THREE.Raycaster();
+    this._ray.set(new THREE.Vector3(x, 500, z), new THREE.Vector3(0, -1, 0));
+    this._ray.far = 1000;
+    return this._ray.intersectObjects(roads, false).length > 0;
+  }
+
   /** Downward raycast against the map to find the ground height at (x,z). */
   _sampleGroundY(x, z) {
     if (!this._ray) this._ray = new THREE.Raycaster();
@@ -302,22 +368,45 @@ export class Game {
     const dt = this.timer.getDelta();
 
     if (this.car) {
-      // Hold the car at the line during the countdown; otherwise drive normally.
+      // Hold every car at the line during the countdown; otherwise drive normally.
       const holding = this.race && this.race.phase === 'countdown';
+      const HOLD = { throttle: 0, steer: 0, handbrake: true };
+
       this.car.revving = holding;
       this.car.setInput(holding
-        ? { throttle: 0, steer: 0, handbrake: true }
+        ? HOLD
         : { throttle: this.input.throttle, steer: this.input.steer, handbrake: this.input.handbrake });
 
-      this.physics.step(dt, (h) => this.car.fixedUpdate(h));
+      if (this.ai) {
+        this.ai.car.revving = holding;
+        this.ai.car.setInput(holding ? HOLD : this.ai.driver.update(dt));
+      }
+
+      // Step the physics with both vehicles inside each fixed step.
+      this.physics.step(dt, (h) => {
+        this.car.fixedUpdate(h);
+        if (this.ai) this.ai.car.fixedUpdate(h);
+      });
       this.car.syncVisual(dt);
+      if (this.ai) {
+        this.ai.car.syncVisual(dt);
+        // Auto-rescue: if the AI gets pinned (wall/flip) for too long, drop it back
+        // onto the racing line facing forward so it always finishes the race.
+        if (this.race && this.race.phase === 'racing' && this.ai.driver.isStuck) {
+          const t = this.ai.driver.rescueTarget();
+          const y = t.y != null ? t.y : (this._sampleGroundY(t.x, t.z) ?? 0.8);
+          this.ai.car.resetTo(t.x, y, t.z, t.heading);
+          this.ai.car.syncVisual(dt);
+          this.ai.driver.onRescued();
+        }
+      }
       this.effects.update(dt);
       this.audio.update();
       if (this.race) {
         this.race.update(dt);
         this._updateStartLights(this.race.startLights());
       }
-      if (this.minimap) this.minimap.update(this.car, this.race);
+      if (this.minimap) this.minimap.update(this.car, this.race, this.ai && this.ai.car);
 
       if (this.driving) this.chaseCam.update(dt);
       else if (this.controls.enabled) this.controls.update();

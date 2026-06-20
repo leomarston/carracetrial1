@@ -21,13 +21,23 @@ A 3D car racing game built with [Three.js](https://threejs.org/), the
   (stable in a straight line, demanding through corners). Grip/feel are all just
   numbers in `statsToTuning()`.
 - **Race (done).** A start/finish gantry spans the track with a proper
-  **standing start**: the car is held on the grid while the gantry start-lights
-  and an on-screen counter run **3 · 2 · 1 · GO!** (engine revving), then it's
+  **standing start**: every car is held on the grid while the gantry start-lights
+  and an on-screen counter run **3 · 2 · 1 · GO!** (engine revving), then they're
   released and the clock starts. **2-lap race** with a **minimap** and
   lap/total/best-lap timing. Tracks live in `src/game/tracks.js`; lap logic
   (`RaceManager.js`) counts a lap only when you cross the line *and* have gone a
   full ~360° around the loop (no cheating, no hand-placed checkpoints). `R`
   restarts the race.
+- **AI opponent (done).** A second car (the Koenigsegg) races you around the same
+  2 laps, driven by `src/game/AIDriver.js`. It follows a **racing line generated
+  from the road itself** (`trackPath.js` samples the road surface, takes the
+  middle line around the loop, and shifts it onto the player's carriageway) using
+  a Stanley-style controller — heading + cross-track to hug the line — with
+  **curvature-based braking** (it lifts/brakes for corners and floors the
+  straights) and a stuck-recovery. Live **race position** (P1/P2) shows in the
+  HUD and both cars appear on the minimap (you = blue, rival = orange); the finish
+  banner shows **YOU WIN / YOU LOSE**. The rival is a different car (grippier,
+  planted) so the F1 is faster on top end but trickier — a fair, beatable race.
 
 ## Getting started
 
@@ -61,13 +71,15 @@ npm run validate-map  # validate both .glb assets with the Khronos validator
 
 ## Assets
 
-Both files in `public/models/` are self-contained glTF 2.0 binaries and pass the
+All files in `public/models/` are self-contained glTF 2.0 binaries and pass the
 official Khronos validator with **0 errors**.
 
-| Asset             | Contents                                              |
-| ----------------- | ----------------------------------------------------- |
-| `carracemap1.glb` | 594 meshes, 62 materials, 61 embedded PNG textures, `KHR_materials_unlit` |
-| `f1car.glb`       | 11 meshes (body + 4 wheels), 5 PBR materials, no extensions |
+| Asset                  | Contents                                              |
+| ---------------------- | ----------------------------------------------------- |
+| `carracemap1.glb`      | 594 meshes, 62 materials, 61 embedded PNG textures, `KHR_materials_unlit` |
+| `f1car.glb`            | 11 meshes (body + 4 wheels), 5 PBR materials, no extensions |
+| `lamborghini.glb`      | the AI rival — actually a Koenigsegg CC850, 25 meshes (rigged wheels), 6 materials, `KHR_materials_clearcoat` |
+| `start_finish_line.glb`| the start/finish gantry arch placed across the line |
 
 Neither uses Draco / Meshopt / KTX2 compression, so both load with a plain
 `GLTFLoader` — no extra decoders. The loaders deliberately do **not** alter the
@@ -103,8 +115,10 @@ car is ~2.8 m wide, realistic for an F1).
 
 - **Map:** "NFS Undercover DS – Highway Battle" by
   [amogusstrikesback2](https://sketchfab.com/amogusstrikesback2).
-- **Car:** "Low Poly F1 Car" by
+- **Player car:** "Low Poly F1 Car" by
   [Straight Design](https://sketchfab.com/creativemango).
+- **Rival car:** "Koenigsegg CC850" by
+  [amogusstrikesback2](https://sketchfab.com/amogusstrikesback2).
 - **Start/Finish gantry:** "Race drag Start and Finish Line" by
   [rohit143r](https://sketchfab.com/rohit143r).
 

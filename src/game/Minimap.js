@@ -60,7 +60,7 @@ export class Minimap {
     this.roadCanvas = off;
   }
 
-  update(car, race) {
+  update(car, race, aiCar) {
     const ctx = this.ctx;
     ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     ctx.drawImage(this.roadCanvas, 0, 0);
@@ -72,20 +72,25 @@ export class Minimap {
     ctx.lineWidth = 2.5;
     ctx.beginPath(); ctx.moveTo(sx - 6, sy); ctx.lineTo(sx + 6, sy); ctx.stroke();
 
-    // car (triangle pointing along heading)
+    if (aiCar) this._drawCar(aiCar, '#ff7a3d', '#3a1400'); // AI = orange
+    this._drawCar(car, '#39c5ff', '#0a2b3a'); // player = blue (drawn on top)
+  }
+
+  /** Draw a car as a triangle pointing along its heading. */
+  _drawCar(car, fill, stroke) {
+    const ctx = this.ctx;
     const p = car.object3D.position;
     const cx = this.mx(p.x), cy = this.my(p.z);
     const h = car.heading;
     const fx = Math.sin(h), fz = Math.cos(h); // forward in world (x,z)
     const rx = fz, rz = -fx; // right
-    const L = 5, Wd = 3;
-    ctx.fillStyle = '#39c5ff';
+    ctx.fillStyle = fill;
     ctx.beginPath();
-    ctx.moveTo(cx + fx * L * this.scale * 0 + fx * 6, cy + fz * 6);
+    ctx.moveTo(cx + fx * 6, cy + fz * 6);
     ctx.lineTo(cx - fx * 4 + rx * 3.2, cy - fz * 4 + rz * 3.2);
     ctx.lineTo(cx - fx * 4 - rx * 3.2, cy - fz * 4 - rz * 3.2);
     ctx.closePath();
     ctx.fill();
-    ctx.strokeStyle = '#0a2b3a'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.strokeStyle = stroke; ctx.lineWidth = 1; ctx.stroke();
   }
 }
