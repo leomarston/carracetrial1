@@ -17,9 +17,9 @@ export class ChaseCamera {
     const L = car.size.z || 8;
     const H = car.size.y || 1.6;
 
-    this.distance = L * 0.7; // constant horizontal trail distance (close behind)
-    this.height = H * 1.8; // low, just above the roof
-    this.lookAhead = L * 0.9;
+    this.distance = L * 1.0; // constant horizontal trail distance (a bit behind)
+    this.height = H * 1.9; // low, just above the roof
+    this.lookAhead = L * 0.85;
     this.lookHeight = H * 0.8;
     this.headingEase = 6;
 
