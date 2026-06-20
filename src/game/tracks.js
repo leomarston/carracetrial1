@@ -9,8 +9,8 @@ export const TRACKS = {
     name: 'Highway Battle',
     laps: 2,
 
-    // Where the car starts: just behind the start line, facing down the straight (-Z).
-    spawn: { x: 2310, z: 15, y: 0.8, heading: -Math.PI },
+    // Where the car starts: on the grid just behind the line, facing down the straight (-Z).
+    spawn: { x: 2310, z: 9, y: 0.8, heading: -Math.PI },
 
     // Start/finish line: a plane across the road. forward = travel direction (-Z).
     // A lap is only counted crossing forward AND after a full loop of progress.

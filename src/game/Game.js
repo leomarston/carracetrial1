@@ -12,6 +12,10 @@ import { Minimap } from './Minimap.js';
 import { PhysicsWorld, buildTrimeshFromMeshes } from '../physics/PhysicsWorld.js';
 import { buildRoadEdgeWalls } from '../physics/roadWalls.js';
 
+const LIGHT_OFF = 0x2a1414;
+const LIGHT_RED = 0xff2200;
+const LIGHT_GREEN = 0x18ff44;
+
 /**
  * Core game shell: renderer, scene, camera, lights, the Rapier physics world
  * and the render loop. The map becomes a static collider and the car is a
@@ -204,7 +208,38 @@ export class Game {
     wrapper.position.set(cfg.x, y, cfg.z);
     this.scene.add(wrapper);
     this.startGantry = wrapper;
+    this._createStartLights(wrapper);
     return wrapper;
+  }
+
+  /** Three start lights mounted on the gantry beam, facing the driver (+Z). */
+  _createStartLights(gantry) {
+    const box = new THREE.Box3().setFromObject(gantry);
+    const cx = (box.min.x + box.max.x) / 2;
+    const sizeY = box.max.y - box.min.y;
+    const r = Math.max(0.55, sizeY * 0.06);
+    const y = box.max.y - sizeY * 0.17;
+    const z = box.max.z + r * 0.8; // driver-facing side
+    const gap = r * 3;
+    const geo = new THREE.SphereGeometry(r, 18, 12);
+    this.startLights = [];
+    for (let i = -1; i <= 1; i++) {
+      const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: LIGHT_OFF }));
+      m.position.set(cx + i * gap, y, z);
+      m.frustumCulled = false;
+      this.scene.add(m);
+      this.startLights.push(m);
+    }
+  }
+
+  _updateStartLights(st) {
+    if (!this.startLights) return;
+    for (let i = 0; i < this.startLights.length; i++) {
+      let c = LIGHT_OFF;
+      if (st.green) c = LIGHT_GREEN;
+      else if (st.on && i < st.red) c = LIGHT_RED;
+      this.startLights[i].material.color.setHex(c);
+    }
   }
 
   /** Downward raycast against the map to find the ground height at (x,z). */
@@ -267,17 +302,21 @@ export class Game {
     const dt = this.timer.getDelta();
 
     if (this.car) {
-      // Feed current input, advance physics in fixed steps, then sync visuals.
-      this.car.setInput({
-        throttle: this.input.throttle,
-        steer: this.input.steer,
-        handbrake: this.input.handbrake,
-      });
+      // Hold the car at the line during the countdown; otherwise drive normally.
+      const holding = this.race && this.race.phase === 'countdown';
+      this.car.revving = holding;
+      this.car.setInput(holding
+        ? { throttle: 0, steer: 0, handbrake: true }
+        : { throttle: this.input.throttle, steer: this.input.steer, handbrake: this.input.handbrake });
+
       this.physics.step(dt, (h) => this.car.fixedUpdate(h));
       this.car.syncVisual(dt);
       this.effects.update(dt);
       this.audio.update();
-      if (this.race) this.race.update(dt);
+      if (this.race) {
+        this.race.update(dt);
+        this._updateStartLights(this.race.startLights());
+      }
       if (this.minimap) this.minimap.update(this.car, this.race);
 
       if (this.driving) this.chaseCam.update(dt);

@@ -69,6 +69,7 @@ export class Vehicle {
     this.wheelSlip = 0; // 0..1 traction loss (spin/lock)
     this.steer = 0; // current visual steering angle (rad)
     this.braking = false;
+    this.revving = false; // held at the line, blipping the throttle (pre-start)
     this.wheelsInContact = 0;
     this.engine = { idle: 1200, redline: 8200, gearTopKmh: gearTopSpeeds(this.topSpeed) };
 
@@ -318,6 +319,12 @@ export class Vehicle {
   }
 
   _updateDrivetrain() {
+    if (this.revving) {
+      // Held at the line before GO: sit on the limiter-ish for an engine note.
+      this.gear = 1;
+      this.rpm = this.engine.idle + 0.6 * (this.engine.redline - this.engine.idle);
+      return;
+    }
     const kmh = Math.abs(this.speed) * 3.6;
     const tops = this.engine.gearTopKmh;
     let g = 0;

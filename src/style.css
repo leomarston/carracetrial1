@@ -285,6 +285,35 @@ body {
 #minimap-wrap.hidden { opacity: 0; }
 #minimap { display: block; }
 
+/* ---- Standing-start countdown ---- */
+#countdown {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  font-weight: 900;
+  font-size: clamp(5rem, 22vh, 14rem);
+  line-height: 1;
+  color: #fff;
+  text-shadow: 0 6px 30px rgba(0, 0, 0, 0.6);
+}
+
+#countdown.hidden { display: none; }
+#countdown.go { color: #18ff44; }
+
+#countdown.pop {
+  animation: cd-pop 0.5s cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+
+@keyframes cd-pop {
+  0% { transform: scale(1.6); opacity: 0; }
+  25% { opacity: 1; }
+  100% { transform: scale(1); opacity: 0.92; }
+}
+
 /* ---- Finish banner ---- */
 #finish-banner {
   position: fixed;

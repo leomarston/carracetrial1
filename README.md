@@ -20,9 +20,11 @@ A 3D car racing game built with [Three.js](https://threejs.org/), the
   reduced grip, lower yaw damping and heavier steering, so it slides when pushed
   (stable in a straight line, demanding through corners). Grip/feel are all just
   numbers in `statsToTuning()`.
-- **Race (done).** A start/finish gantry spans the track, the car starts behind
-  it, and there's a **2-lap race** with a **minimap** and lap/total/best-lap
-  timing. Tracks are defined in `src/game/tracks.js`; lap logic
+- **Race (done).** A start/finish gantry spans the track with a proper
+  **standing start**: the car is held on the grid while the gantry start-lights
+  and an on-screen counter run **3 · 2 · 1 · GO!** (engine revving), then it's
+  released and the clock starts. **2-lap race** with a **minimap** and
+  lap/total/best-lap timing. Tracks live in `src/game/tracks.js`; lap logic
   (`RaceManager.js`) counts a lap only when you cross the line *and* have gone a
   full ~360° around the loop (no cheating, no hand-placed checkpoints). `R`
   restarts the race.

@@ -63,6 +63,8 @@ async function boot() {
   const curEl = document.getElementById('lap-time');
   const bestEl = document.getElementById('best-time');
   const banner = document.getElementById('finish-banner');
+  const cdEl = document.getElementById('countdown');
+  let lastCd = '';
   const updateHud = () => {
     const c = game.car, r = game.race;
     if (c) {
@@ -72,8 +74,25 @@ async function boot() {
     }
     if (r) {
       lapEl.textContent = `LAP ${r.currentLap}/${r.totalLaps}`;
-      curEl.textContent = r.started ? formatTime(r.lapTime) : 'cross the line to start';
+      curEl.textContent = r.started ? formatTime(r.lapTime) : '—';
       bestEl.textContent = r.bestLap ? `best ${formatTime(r.bestLap)}` : '';
+
+      // Countdown overlay (re-trigger the pop animation each time it changes).
+      const t = r.countdownText;
+      if (t) {
+        if (t !== lastCd) {
+          cdEl.textContent = t;
+          cdEl.classList.toggle('go', t === 'GO!');
+          cdEl.classList.remove('hidden', 'pop');
+          void cdEl.offsetWidth; // reflow so the animation restarts
+          cdEl.classList.add('pop');
+          lastCd = t;
+        }
+      } else {
+        cdEl.classList.add('hidden');
+        lastCd = '';
+      }
+
       if (r.finished && banner.classList.contains('hidden')) {
         banner.querySelector('.total').textContent = formatTime(r.raceTime);
         banner.querySelector('.best').textContent = r.bestLap ? `Best lap ${formatTime(r.bestLap)}` : '';
