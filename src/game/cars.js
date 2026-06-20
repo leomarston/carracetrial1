@@ -38,7 +38,7 @@ export const CARS = {
     id: 'lambo',
     name: 'Koenigsegg CC850',
     url: 'models/lamborghini.glb',
-    targetWidth: CAR_WIDTH,
+    targetWidth: CAR_WIDTH * 1.15, // a little bigger than the F1
     flip: false,
     mass: 1200,
     // Grippy and planted (a Koenigsegg): carries corner speed cleanly. The F1 is
