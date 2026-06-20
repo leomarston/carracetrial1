@@ -13,7 +13,7 @@ import validator from 'gltf-validator';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const modelsDir = path.resolve(__dirname, '../public/models');
 
-const ASSETS = ['carracemap1.glb', 'f1car.glb'];
+const ASSETS = ['carracemap1.glb', 'mercedes.glb', 'lamborghini.glb'];
 
 let totalErrors = 0;
 

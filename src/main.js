@@ -7,7 +7,7 @@ import { formatTime } from './game/RaceManager.js';
 // Assets live in /public so they are served verbatim (never bundled/transformed).
 const base = import.meta.env.BASE_URL;
 const MAP_URL = `${base}models/carracemap1.glb`;
-const P1_CAR = { ...CARS.f1, url: `${base}${CARS.f1.url}` };
+const P1_CAR = { ...CARS.mercedes, url: `${base}${CARS.mercedes.url}` };
 const P2_CAR = { ...CARS.lambo, url: `${base}${CARS.lambo.url}` };
 const TRACK = { ...TRACKS.highway, gantry: { ...TRACKS.highway.gantry, url: `${base}${TRACKS.highway.gantry.url}` } };
 

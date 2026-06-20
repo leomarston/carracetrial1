@@ -6,7 +6,7 @@ A 3D car racing game built with [Three.js](https://threejs.org/), the
 ## Status
 
 - **Stage 1 — Map import (done).** The highway-battle map is imported and rendered.
-- **Stage 2 — Drivable car (done).** An F1 car is imported and drivable.
+- **Stage 2 — Drivable cars (done).** Cars are imported and drivable.
 - **Stage 3 — Real driving physics (in progress).** The car is a Rapier
   raycast vehicle: a dynamic chassis with four suspension wheels, grip/slip,
   weight transfer and real collisions. **Feel pass:** spinning/steering wheels,
@@ -15,10 +15,10 @@ A 3D car racing game built with [Three.js](https://threejs.org/), the
   **invisible road-edge walls** that keep you on the track.
 - **Cars & stats.** Each car is defined in `src/game/cars.js` by ratings out of
   10 (Speed, Acceleration, Grip / *yol tutuşu*, Braking, Handling) that directly
-  drive the physics — so new cars are just a new entry + model. The F1 is fast
-  (top speed ~340 km/h) and deliberately loose: reduced grip, lower yaw damping
-  and heavier steering, so it slides when pushed (demanding through corners). The
-  Koenigsegg is grippier and more planted. Grip/feel are all just numbers in
+  drive the physics — so new cars are just a new entry + model. The Mercedes is
+  fast (top speed ~340 km/h) and a touch loose: it slides when pushed (demanding
+  through corners). The Koenigsegg is grippier and more planted. Grip/feel are all
+  just numbers in
   `statsToTuning()`.
 - **Race (done).** A start/finish gantry spans the track with a proper
   **standing start**: every car is held on the grid while the gantry start-lights
@@ -29,7 +29,7 @@ A 3D car racing game built with [Three.js](https://threejs.org/), the
   full ~360° around the loop (no cheating, no hand-placed checkpoints). `R`
   restarts the race.
 - **Two-player split-screen (done).** Two humans race head-to-head on one
-  keyboard: **Player 1 drives the F1 (top half, WASD)** and **Player 2 drives the
+  keyboard: **Player 1 drives the Mercedes (top half, WASD)** and **Player 2 drives the
   Koenigsegg (bottom half, arrow keys)**. The screen is split **horizontally**
   into two viewports, each with its own chase camera following its car; both cars
   live in the same physics world so they collide and can block each other. Each
@@ -48,7 +48,7 @@ Then open the printed URL (default http://localhost:5173) in a browser.
 
 ### Controls (2-player split-screen)
 
-| Action          | Player 1 (top, F1) | Player 2 (bottom, Koenigsegg) |
+| Action          | Player 1 (top, Mercedes) | Player 2 (bottom, Koenigsegg) |
 | --------------- | ------------------ | ----------------------------- |
 | Accelerate      | `W`                | `↑`                           |
 | Brake / reverse | `S`                | `↓`                           |
@@ -77,8 +77,8 @@ official Khronos validator with **0 errors**.
 | Asset                  | Contents                                              |
 | ---------------------- | ----------------------------------------------------- |
 | `carracemap1.glb`      | 594 meshes, 62 materials, 61 embedded PNG textures, `KHR_materials_unlit` |
-| `f1car.glb`            | 11 meshes (body + 4 wheels), 5 PBR materials, no extensions |
-| `lamborghini.glb`      | the AI rival — actually a Koenigsegg CC850, 25 meshes (rigged wheels), 6 materials, `KHR_materials_clearcoat` |
+| `mercedes.glb`         | Player 1 — Mercedes-Benz Silver Lightning, 29 meshes (rigged wheels), 5 materials, `KHR_materials_clearcoat` |
+| `lamborghini.glb`      | Player 2 — actually a Koenigsegg CC850, 25 meshes (rigged wheels), 6 materials, `KHR_materials_clearcoat` |
 | `start_finish_line.glb`| the start/finish gantry arch placed across the line |
 
 Neither uses Draco / Meshopt / KTX2 compression, so both load with a plain
@@ -103,9 +103,9 @@ car is ~2.8 m wide, realistic for an F1).
   a suspension spring/damper (ride height, dive, squat, body roll), grip via
   friction-slip, and steering/engine/brake forces. Rear-wheel drive, front
   braking bias, speed-sensitive steering, reverse and handbrake.
-- **Import & sizing**: the F1 model (100× Sketchfab scale baked in) is scaled to
-  a **one-lane width** (~2.8 m), recentred so the chassis origin is its centre,
-  and rotated 180° so its nose leads.
+- **Import & sizing**: each car model is scaled to a fixed body width
+  (`CAR_WIDTH`, ~2.8 m) and recentred so the chassis origin is its centre, with
+  decorative emissive "glow" planes hidden so they don't float or skew sizing.
 - **Start line**: spawns centred in a lane under the **"CRESCENT CITY NORTH"
   gantry** (mesh `Finish_Strut001`), facing the map's longest straight.
 - **Chase camera** (`src/game/ChaseCamera.js`): close, with a **fixed follow
@@ -115,9 +115,8 @@ car is ~2.8 m wide, realistic for an F1).
 
 - **Map:** "NFS Undercover DS – Highway Battle" by
   [amogusstrikesback2](https://sketchfab.com/amogusstrikesback2).
-- **Player car:** "Low Poly F1 Car" by
-  [Straight Design](https://sketchfab.com/creativemango).
-- **Rival car:** "Koenigsegg CC850" by
+- **Player 1 car:** "Mercedes-Benz Silver Lightning" (Sketchfab, CC-BY-4.0).
+- **Player 2 car:** "Koenigsegg CC850" by
   [amogusstrikesback2](https://sketchfab.com/amogusstrikesback2).
 - **Start/Finish gantry:** "Race drag Start and Finish Line" by
   [rohit143r](https://sketchfab.com/rohit143r).

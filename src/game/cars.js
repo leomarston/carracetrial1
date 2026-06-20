@@ -11,38 +11,41 @@
  *   handling     – steering response & stability (higher = more planted)
  */
 
-// Every car is scaled to this fixed body width (metres) so they're all the same
-// size on track as the F1 — the car's length/height then follow its own model.
+// Every car is scaled to this fixed body width (metres) so they're all a
+// consistent size on track — the car's length/height then follow its own model.
 export const CAR_WIDTH = 2.77;
 
 export const CARS = {
-  f1: {
-    id: 'f1',
-    name: 'Scuderia F1',
-    url: 'models/f1car.glb',
+  // Player 1's car. "Mercedes-Benz Silver Lightning" (Sketchfab, CC-BY-4.0).
+  // Real-world metres, nose points +Z (no flip); the emissive "_glows" billboard
+  // planes are hidden so they don't float or skew sizing.
+  mercedes: {
+    id: 'mercedes',
+    name: 'Mercedes Silver Lightning',
+    url: 'models/mercedes.glb',
     targetWidth: CAR_WIDTH,
-    flip: true,
-    mass: 800,
-    stats: { speed: 10, acceleration: 9, grip: 3, braking: 9, handling: 3 },
-    // Visual rig: which meshes are the tyres (spun/steered) and the brake lights.
-    wheelMeshRe: /^WheelFront00[0-3]_black/,
-    brakeLights: [{ mat: 'glossyorange' }, { mat: 'BackLight', maxVerts: 100 }],
+    flip: false,
+    mass: 950,
+    // Fast and eager, a touch looser than the Koenigsegg.
+    stats: { speed: 10, acceleration: 9, grip: 6, braking: 8, handling: 6 },
+    hideMeshes: /glows/i,
+    // Each wheel is a group node (wheel_FL/FR/BL/BR) holding its rim + details.
+    wheelGroupRe: /^wheel_(FL|FR|BL|BR)$/i,
   },
 
   // Player 2's car. The asset (lamborghini.glb) is actually a Koenigsegg CC850
   // by amogusstrikesback2 (CC-BY-4.0). It's already in real-world metres and its
   // nose points +Z, so no flip; the emissive "_glows" billboard planes (one juts
-  // ~1.9 m past the nose) are hidden so they don't float or skew sizing. Scaled to
-  // the same fixed width as the F1.
+  // ~1.9 m past the nose) are hidden so they don't float or skew sizing.
   lambo: {
     id: 'lambo',
     name: 'Koenigsegg CC850',
     url: 'models/lamborghini.glb',
-    targetWidth: CAR_WIDTH * 1.15, // a little bigger than the F1
+    targetWidth: CAR_WIDTH * 1.15, // a little bigger than Player 1's car
     flip: false,
     mass: 1200,
-    // Grippy and planted (a Koenigsegg): carries corner speed cleanly. The F1 is
-    // faster on top end but twitchier — a fair head-to-head.
+    // Grippy and planted (a Koenigsegg): carries corner speed cleanly. The
+    // Mercedes is faster on top end but twitchier — a fair head-to-head.
     stats: { speed: 9, acceleration: 8, grip: 8, braking: 8, handling: 8 },
     hideMeshes: /glows/i,
     // Each wheel is a group node (wheelFL/FR/BL/BR) holding its rim + tyre.
