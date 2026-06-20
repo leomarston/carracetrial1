@@ -134,6 +134,14 @@ export class Game {
     this.chaseCam = new ChaseCamera(this.camera, car);
     this.effects = new Effects(this.scene, car);
     this.audio = new AudioManager(car);
+
+    // Gameplay near/far. The map-overview framing left a huge near plane
+    // (~7 units, from maxDim/1000); with the close chase camera that clipped the
+    // road right under the camera and showed the sky background "through" it.
+    this.camera.near = 0.3;
+    this.camera.far = 12000;
+    this.camera.updateProjectionMatrix();
+
     this.setDriving(true);
 
     window.addEventListener('keydown', (e) => {
