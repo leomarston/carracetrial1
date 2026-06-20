@@ -11,11 +11,11 @@ const P1_CAR = { ...CARS.mercedes, url: `${base}${CARS.mercedes.url}` };
 const P2_CAR = { ...CARS.lambo, url: `${base}${CARS.lambo.url}` };
 const TRACK = { ...TRACKS.highway, gantry: { ...TRACKS.highway.gantry, url: `${base}${TRACKS.highway.gantry.url}` } };
 
+const NOS_C = 2 * Math.PI * 42; // nitrous-gauge ring circumference (r=42 in the SVG)
+
 const overlay = document.getElementById('loading-overlay');
 const progressBar = document.getElementById('progress-bar');
 const status = document.getElementById('loading-status');
-
-const ORDINAL = ['', '1st', '2nd', '3rd', '4th'];
 
 async function boot() {
   status.textContent = 'Initialising physics…';
@@ -45,11 +45,10 @@ async function boot() {
 
   progressBar.style.width = '100%';
   overlay.classList.add('hidden');
-  for (const id of ['controls-hint', 'p1-hud', 'p2-hud', 'divider', 'minimap-wrap']) {
+  for (const id of ['p1-hud', 'p2-hud', 'divider', 'minimap-wrap']) {
     document.getElementById(id).classList.remove('hidden');
   }
 
-  // Per-player HUD cells.
   const p1 = hudCells('p1-hud');
   const p2 = hudCells('p2-hud');
   const banner = document.getElementById('finish-banner');
@@ -60,9 +59,11 @@ async function boot() {
     const c = entry.car;
     cells.kmh.textContent = Math.abs(c.speed * 3.6).toFixed(0);
     cells.gear.textContent = c.gear === 0 ? 'R' : `${c.gear}`;
-    cells.lap.textContent = `LAP ${race.lapOf(entry)}/${race.totalLaps}`;
-    cells.pos.textContent = race.started ? ORDINAL[entry.position] : '—';
-    cells.pos.style.color = entry.position === 1 ? '#46d36a' : '#ff9f43';
+    cells.lap.textContent = `${race.lapOf(entry)}/${race.totalLaps}`;
+    cells.pos.textContent = race.started ? `${entry.position}` : '—';
+    cells.time.textContent = raceClock(race.raceTime);
+    const nos = Math.max(0, Math.min(1, c.rpm / c.engine.redline));
+    cells.nos.style.strokeDashoffset = `${NOS_C * (1 - nos)}`;
   };
 
   const updateHud = () => {
@@ -89,7 +90,7 @@ async function boot() {
 
       if (r.finished && banner.classList.contains('hidden')) {
         const w = r.winner;
-        banner.querySelector('.fb-title').textContent = `PLAYER ${w.index + 1} WINS! 🏆`;
+        banner.querySelector('.fb-title').textContent = `PLAYER ${w.index + 1} WINS!`;
         banner.querySelector('.result').textContent = `${w.name}`;
         banner.querySelector('.total').textContent = formatTime(w.finishTime);
         banner.classList.remove('hidden');
@@ -107,12 +108,25 @@ async function boot() {
 
 function hudCells(rootId) {
   const root = document.getElementById(rootId);
+  const nos = root.querySelector('.nos-fill');
+  nos.style.strokeDasharray = `${NOS_C}`;
+  nos.style.strokeDashoffset = `${NOS_C}`;
   return {
-    kmh: root.querySelector('.ph-kmh'),
-    gear: root.querySelector('.ph-gear'),
-    lap: root.querySelector('.ph-lap'),
-    pos: root.querySelector('.ph-pos'),
+    pos: root.querySelector('.rhud-pos'),
+    time: root.querySelector('.rhud-time'),
+    lap: root.querySelector('.rhud-lap'),
+    kmh: root.querySelector('.rhud-kmh'),
+    gear: root.querySelector('.rhud-gear'),
+    nos,
   };
+}
+
+/** Race clock as m:ss.dd (always with minutes), e.g. 3:22.27. */
+function raceClock(t) {
+  t = Math.max(0, t || 0);
+  const m = Math.floor(t / 60);
+  const s = t - m * 60;
+  return `${m}:${s.toFixed(2).padStart(5, '0')}`;
 }
 
 boot().catch((err) => {

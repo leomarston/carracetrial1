@@ -1,9 +1,10 @@
 import * as THREE from 'three';
 
 /**
- * Top-down minimap. The road triangles are rasterised once into an offscreen
- * canvas (clean track outline); each frame we draw that, the start/finish
- * marker, and the car (a heading triangle).
+ * Circular top-down minimap (racing-game style): a dark disc with the track
+ * rasterised once into an offscreen canvas, then the start/finish marker and the
+ * two cars (heading triangles) drawn each frame. The canvas is square so the
+ * wrapper's border-radius makes a clean circle.
  */
 export class Minimap {
   /**
@@ -15,29 +16,30 @@ export class Minimap {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
     this.track = track;
+
+    const S = 150; // square → circular when clipped
+    const pad = 16;
+    canvas.width = S; canvas.height = S;
+    this.size = S;
+
     const b = track.roadBounds;
     this.minX = b.minX; this.minZ = b.minZ;
     const worldW = b.maxX - b.minX, worldH = b.maxZ - b.minZ;
-    const pad = 8;
-    const maxW = 150, maxH = 210;
-    this.scale = Math.min(maxW / worldW, maxH / worldH);
-    this.w = worldW * this.scale;
-    this.h = worldH * this.scale;
-    canvas.width = this.w + pad * 2;
-    canvas.height = this.h + pad * 2;
-    this.pad = pad;
+    this.scale = Math.min((S - pad * 2) / worldW, (S - pad * 2) / worldH);
+    this.offX = (S - worldW * this.scale) / 2; // centre the track in the disc
+    this.offZ = (S - worldH * this.scale) / 2;
 
     this._buildRoad(roadMeshes);
   }
 
-  mx(x) { return this.pad + (x - this.minX) * this.scale; }
-  my(z) { return this.pad + (z - this.minZ) * this.scale; }
+  mx(x) { return this.offX + (x - this.minX) * this.scale; }
+  my(z) { return this.offZ + (z - this.minZ) * this.scale; }
 
   _buildRoad(roadMeshes) {
     const off = document.createElement('canvas');
     off.width = this.canvas.width; off.height = this.canvas.height;
     const c = off.getContext('2d');
-    c.fillStyle = 'rgba(255,255,255,0.85)';
+    c.fillStyle = 'rgba(196, 214, 232, 0.62)';
     const a = new THREE.Vector3(), b = new THREE.Vector3(), d = new THREE.Vector3();
     for (const mesh of roadMeshes) {
       const g = mesh.geometry; const pos = g?.attributes?.position; if (!pos) continue;
@@ -60,20 +62,22 @@ export class Minimap {
     this.roadCanvas = off;
   }
 
-  update(car, race, aiCar) {
+  update(car, race, car2) {
     const ctx = this.ctx;
-    ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    ctx.clearRect(0, 0, this.size, this.size);
+    ctx.fillStyle = 'rgba(10, 14, 19, 0.9)'; // dark disc
+    ctx.fillRect(0, 0, this.size, this.size);
     ctx.drawImage(this.roadCanvas, 0, 0);
 
     // start/finish marker
     const sl = this.track.startLine;
     const sx = this.mx(sl.x), sy = this.my(sl.z);
-    ctx.strokeStyle = (race && race.finished) ? '#46d36a' : '#ff3b30';
+    ctx.strokeStyle = (race && race.finished) ? '#8dff3a' : '#ff3b30';
     ctx.lineWidth = 2.5;
     ctx.beginPath(); ctx.moveTo(sx - 6, sy); ctx.lineTo(sx + 6, sy); ctx.stroke();
 
-    if (aiCar) this._drawCar(aiCar, '#ff7a3d', '#3a1400'); // AI = orange
-    this._drawCar(car, '#39c5ff', '#0a2b3a'); // player = blue (drawn on top)
+    if (car2) this._drawCar(car2, '#eaf2ff', '#10202e'); // Player 2 = silver
+    this._drawCar(car, '#ffb21a', '#3a2400'); // Player 1 = amber (on top)
   }
 
   /** Draw a car as a triangle pointing along its heading. */

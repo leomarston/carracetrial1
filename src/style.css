@@ -86,88 +86,126 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* ---- Controls hint ---- */
-#controls-hint {
-  position: fixed;
-  top: 6px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 20;
-  font-size: 0.72rem;
-  opacity: 0.65;
-  background: rgba(0, 0, 0, 0.4);
-  padding: 4px 12px;
-  border-radius: 8px;
-  white-space: nowrap;
-  pointer-events: none;
-  backdrop-filter: blur(4px);
+/* ============================================================================
+   Racing-game HUD (split-screen). Angled amber/green panels, speed read-out with
+   a nitrous-style gauge, circular minimap.
+   ========================================================================== */
+:root {
+  --hud-font: "Arial Narrow", "Roboto Condensed", "Oswald", Impact, system-ui, sans-serif;
+  --hud-amber: #ffb21a;
+  --hud-amber-dk: #ff9000;
+  --hud-green: #8dff3a;
+  --hud-panel: rgba(8, 11, 16, 0.74);
 }
 
-#controls-hint.hidden { display: none; }
+.rhud { display: contents; }
+.rhud.hidden { display: none; }
 
-/* ---- Per-player HUD (top half = P1, bottom half = P2) ---- */
-.player-hud {
+/* ---- Info cluster: position + race time + lap ---- */
+.rhud-info {
   position: fixed;
-  left: 14px;
-  z-index: 12;
+  z-index: 14;
   pointer-events: none;
-  background: rgba(0, 0, 0, 0.42);
-  padding: 8px 12px;
-  border-radius: 10px;
-  backdrop-filter: blur(4px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  min-width: 158px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+  font-family: var(--hud-font);
+  transform: skewX(-11deg);
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.55);
 }
 
-.player-hud.hidden { display: none; }
-#p1-hud { top: 12px; }
-#p2-hud { bottom: 12px; }
+.rhud-info-top { display: flex; align-items: stretch; gap: 4px; }
 
-.ph-row {
+.rhud-pos {
+  background: linear-gradient(180deg, #ffd75a, var(--hud-amber-dk));
+  color: #2a1500;
+  font-weight: 800;
+  font-size: 1.7rem;
+  line-height: 1;
+  padding: 4px 13px;
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-weight: 800;
-  font-size: 0.8rem;
-  letter-spacing: 0.04em;
+  box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.4);
 }
 
-.ph-tag {
-  background: #39c5ff;
-  color: #04222e;
-  padding: 1px 7px;
-  border-radius: 5px;
-  font-size: 0.72rem;
-  font-weight: 900;
-}
-
-.ph-tag.p2 { background: #ff7a3d; color: #2a1000; }
-.ph-lap { color: #fff; opacity: 0.9; }
-.ph-pos { margin-left: auto; font-weight: 900; color: #46d36a; }
-
-.ph-speed {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  margin-top: 5px;
-}
-
-.ph-kmh {
-  font-size: 1.55rem;
-  font-weight: 800;
+.rhud-time {
+  background: var(--hud-panel);
+  color: var(--hud-amber);
+  font-weight: 700;
+  font-size: 1.45rem;
+  letter-spacing: 0.01em;
+  padding: 4px 13px;
   font-variant-numeric: tabular-nums;
-  color: var(--accent);
+  display: flex;
+  align-items: center;
 }
 
-.ph-unit { font-size: 0.7rem; opacity: 0.6; }
-.ph-gear {
-  margin-left: auto;
-  font-size: 1rem;
-  font-weight: 800;
-  opacity: 0.85;
-  min-width: 1.2em;
-  text-align: center;
+.rhud-info-bot {
+  display: flex;
+  gap: 9px;
+  align-items: baseline;
+  background: var(--hud-panel);
+  padding: 2px 13px 3px;
 }
+
+.rhud-lap-lbl { color: #fff; font-weight: 700; font-size: 0.82rem; letter-spacing: 0.22em; opacity: 0.85; }
+.rhud-lap { color: #fff; font-weight: 800; font-size: 1.05rem; font-variant-numeric: tabular-nums; }
+
+/* ---- Speed cluster: nitrous gauge + km/h + gear ---- */
+.rhud-speed {
+  position: fixed;
+  z-index: 14;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--hud-font);
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.55);
+}
+
+.rhud-nos { width: 66px; height: 66px; filter: drop-shadow(0 0 5px rgba(141, 255, 58, 0.35)); }
+.nos-track { fill: none; stroke: rgba(255, 255, 255, 0.16); stroke-width: 7; }
+.nos-fill {
+  fill: none;
+  stroke: var(--hud-green);
+  stroke-width: 7;
+  stroke-linecap: round;
+  transform: rotate(-90deg);
+  transform-origin: 50% 50%;
+  transition: stroke-dashoffset 0.08s linear;
+}
+.nos-bottle { fill: var(--hud-green); opacity: 0.92; }
+
+.rhud-read {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 0.95;
+  background: var(--hud-panel);
+  padding: 4px 11px 5px;
+  transform: skewX(-11deg);
+}
+
+.rhud-unit { color: #cfeecf; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.12em; opacity: 0.8; }
+.rhud-kmh { color: #fff; font-weight: 800; font-size: 2.15rem; font-variant-numeric: tabular-nums; }
+
+.rhud-gear {
+  font-family: var(--hud-font);
+  color: var(--hud-amber);
+  font-weight: 800;
+  font-size: 1.7rem;
+  transform: skewX(-11deg);
+  min-width: 0.7em;
+  text-align: center;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.55);
+}
+
+/* Player 1 occupies the top half, Player 2 the bottom half. */
+#p1-hud .rhud-info  { top: 12px; right: 18px; }
+#p1-hud .rhud-speed { top: calc(50% - 92px); right: 18px; }
+#p2-hud .rhud-info  { top: calc(50% + 12px); right: 18px; }
+#p2-hud .rhud-speed { bottom: 12px; right: 18px; }
 
 /* ---- Split-screen divider ---- */
 #divider {
@@ -177,25 +215,25 @@ body {
   top: 50%;
   height: 0;
   z-index: 15;
-  border-top: 3px solid rgba(0, 0, 0, 0.85);
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18);
+  border-top: 3px solid rgba(0, 0, 0, 0.9);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12);
   pointer-events: none;
 }
 
 #divider.hidden { display: none; }
 
-/* ---- Minimap (centered on the right edge, both players glance to it) ---- */
+/* ---- Minimap: a dark circle on the left, straddling the divider ---- */
 #minimap-wrap {
   position: fixed;
-  right: 12px;
+  left: 18px;
   top: 50%;
   transform: translateY(-50%);
   z-index: 16;
-  background: rgba(0, 0, 0, 0.45);
-  padding: 6px;
-  border-radius: 10px;
-  backdrop-filter: blur(4px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 50%;
+  overflow: hidden;
+  background: rgba(6, 9, 13, 0.82);
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
   transition: opacity 0.4s ease;
 }
 
@@ -211,15 +249,17 @@ body {
   align-items: center;
   justify-content: center;
   pointer-events: none;
-  font-weight: 900;
+  font-family: var(--hud-font);
+  font-weight: 800;
   font-size: clamp(5rem, 22vh, 14rem);
   line-height: 1;
-  color: #fff;
+  color: var(--hud-amber);
+  transform: skewX(-11deg);
   text-shadow: 0 6px 30px rgba(0, 0, 0, 0.6);
 }
 
 #countdown.hidden { display: none; }
-#countdown.go { color: #18ff44; }
+#countdown.go { color: var(--hud-green); }
 
 #countdown.pop {
   animation: cd-pop 0.5s cubic-bezier(0.2, 0.9, 0.3, 1) both;
@@ -248,30 +288,23 @@ body {
 #finish-banner.hidden { display: none; }
 
 .fb-title {
-  font-size: clamp(2rem, 7vw, 3.5rem);
-  font-weight: 900;
-  letter-spacing: 0.1em;
-  background: linear-gradient(90deg, #fff, #46d36a);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+  font-family: var(--hud-font);
+  font-size: clamp(2.4rem, 8vw, 4rem);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: var(--hud-amber);
+  transform: skewX(-11deg);
+  text-shadow: 0 4px 18px rgba(0, 0, 0, 0.6);
 }
 
-.fb-title.lose {
-  background: linear-gradient(90deg, #fff, var(--accent));
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.fb-row.result { font-size: 1.05rem; opacity: 0.85; }
+.fb-row.result { font-size: 1.1rem; opacity: 0.9; }
 
 .fb-row {
   font-size: 1.2rem;
   font-variant-numeric: tabular-nums;
 }
 
-.fb-row .total, .fb-row.best { color: var(--accent); font-weight: 800; }
+.fb-row .total { color: var(--hud-amber); font-weight: 800; }
 .fb-hint { margin-top: 10px; opacity: 0.7; font-size: 0.9rem; }
 
 /* ---- Attribution (CC-BY-4.0 requirement) ---- */
