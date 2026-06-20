@@ -15,11 +15,11 @@ A 3D car racing game built with [Three.js](https://threejs.org/), the
   **invisible road-edge walls** that keep you on the track.
 - **Cars & stats.** Each car is defined in `src/game/cars.js` by ratings out of
   10 (Speed, Acceleration, Grip / *yol tutuşu*, Braking, Handling) that directly
-  drive the physics — so new cars are just a new entry + model, and the ratings
-  show in the HUD. The F1 is fast (top speed ~340 km/h) and deliberately loose:
-  reduced grip, lower yaw damping and heavier steering, so it slides when pushed
-  (stable in a straight line, demanding through corners). Grip/feel are all just
-  numbers in `statsToTuning()`.
+  drive the physics — so new cars are just a new entry + model. The F1 is fast
+  (top speed ~340 km/h) and deliberately loose: reduced grip, lower yaw damping
+  and heavier steering, so it slides when pushed (demanding through corners). The
+  Koenigsegg is grippier and more planted. Grip/feel are all just numbers in
+  `statsToTuning()`.
 - **Race (done).** A start/finish gantry spans the track with a proper
   **standing start**: every car is held on the grid while the gantry start-lights
   and an on-screen counter run **3 · 2 · 1 · GO!** (engine revving), then they're
@@ -28,18 +28,14 @@ A 3D car racing game built with [Three.js](https://threejs.org/), the
   (`RaceManager.js`) counts a lap only when you cross the line *and* have gone a
   full ~360° around the loop (no cheating, no hand-placed checkpoints). `R`
   restarts the race.
-- **AI opponent (done).** A second car (the Koenigsegg) races you around the same
-  2 laps. It follows a **racing line generated from the road itself**
-  (`trackPath.js` samples the road surface, takes the middle line around the loop,
-  and shifts it onto the player's carriageway, staying on-road). The car is driven
-  **kinematically along that line** (`AIDriver.js`): it advances by arc length at a
-  speed that eases toward a **curvature-derived limit** — slow for corners, fast on
-  the straights — so it never spins, reverses or beaches on this big walled
-  circuit, yet (being a kinematic rigid body) it still collides with and nudges
-  the player. Live **race position** (P1/P2) shows in the HUD and both cars appear
-  on the minimap (you = blue, rival = orange); the finish banner shows **YOU WIN /
-  YOU LOSE**. The rival tops out a bit below the F1, so you can out-drag it on the
-  straights — a fair, beatable race.
+- **Two-player split-screen (done).** Two humans race head-to-head on one
+  keyboard: **Player 1 drives the F1 (top half, WASD)** and **Player 2 drives the
+  Koenigsegg (bottom half, arrow keys)**. The screen is split **horizontally**
+  into two viewports, each with its own chase camera following its car; both cars
+  live in the same physics world so they collide and can block each other. Each
+  half has its own speed/gear/lap/position HUD, a shared minimap (P1 = blue,
+  P2 = orange) sits on the divider, and the finish banner shows **PLAYER n WINS**
+  when the first driver completes the laps. `R` restarts.
 
 ## Getting started
 
@@ -50,18 +46,20 @@ npm run dev      # start the dev server (prints a local URL)
 
 Then open the printed URL (default http://localhost:5173) in a browser.
 
-### Controls
+### Controls (2-player split-screen)
 
-| Key                 | Action            |
-| ------------------- | ----------------- |
-| `W` / `↑`           | Accelerate        |
-| `S` / `↓`           | Brake / reverse   |
-| `A` / `←`           | Steer left        |
-| `D` / `→`           | Steer right       |
-| `Space`             | Handbrake         |
-| `R`                 | Reset car to the start line |
-| `C`                 | Toggle free-orbit camera (inspect) |
-| `P`                 | Toggle physics-collider debug view |
+| Action          | Player 1 (top, F1) | Player 2 (bottom, Koenigsegg) |
+| --------------- | ------------------ | ----------------------------- |
+| Accelerate      | `W`                | `↑`                           |
+| Brake / reverse | `S`                | `↓`                           |
+| Steer left      | `A`                | `←`                           |
+| Steer right     | `D`                | `→`                           |
+| Handbrake       | `Space`            | `Right-Shift` / `Right-Ctrl`  |
+
+| Key  | Action                              |
+| ---- | ----------------------------------- |
+| `R`  | Restart the race (resets both cars) |
+| `P`  | Toggle physics-collider debug view  |
 
 ### Other commands
 

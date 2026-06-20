@@ -24,32 +24,25 @@
       </div>
     </div>
 
-    <!-- In-world HUD / info -->
-    <div id="hud" class="hidden">
-      <div id="map-stats"></div>
+    <!-- Controls hint -->
+    <div id="controls-hint" class="hidden">
+      <b>P1</b> W A S D + Space &nbsp;·&nbsp; <b>P2</b> ◄ ▲ ▼ ► + Right-Shift &nbsp;·&nbsp; <b>R</b> restart
     </div>
 
-    <!-- Car stats (ratings out of 10) -->
-    <div id="car-stats" class="hidden"></div>
-
-    <!-- Speedometer / gear / tachometer -->
-    <div id="speedo-wrap" class="hidden">
-      <div class="readout">
-        <span id="speedo">0 km/h</span>
-        <span id="gear">N</span>
-      </div>
-      <div id="rpm-track"><div id="rpm-bar"></div></div>
+    <!-- Per-player HUDs (top half = P1, bottom half = P2) -->
+    <div id="p1-hud" class="player-hud hidden">
+      <div class="ph-row"><span class="ph-tag">P1</span><span class="ph-lap">LAP 1/2</span><span class="ph-pos">1st</span></div>
+      <div class="ph-speed"><span class="ph-kmh">0</span><span class="ph-unit">km/h</span><span class="ph-gear">1</span></div>
+    </div>
+    <div id="p2-hud" class="player-hud hidden">
+      <div class="ph-row"><span class="ph-tag p2">P2</span><span class="ph-lap">LAP 1/2</span><span class="ph-pos">2nd</span></div>
+      <div class="ph-speed"><span class="ph-kmh">0</span><span class="ph-unit">km/h</span><span class="ph-gear">1</span></div>
     </div>
 
-    <!-- Race HUD: position + lap counter + timing -->
-    <div id="race-hud" class="hidden">
-      <div id="position">P1<span class="pos-total">/2</span></div>
-      <div id="lap-count">LAP 1/2</div>
-      <div id="lap-time">cross the line to start</div>
-      <div id="best-time"></div>
-    </div>
+    <!-- Split-screen divider -->
+    <div id="divider" class="hidden"></div>
 
-    <!-- Minimap -->
+    <!-- Minimap (shared, shows both cars) -->
     <div id="minimap-wrap" class="hidden">
       <canvas id="minimap"></canvas>
     </div>
@@ -61,8 +54,7 @@
     <div id="finish-banner" class="hidden">
       <div class="fb-title">FINISH! 🏁</div>
       <div class="fb-row result"></div>
-      <div class="fb-row">Total: <span class="total">--</span></div>
-      <div class="fb-row best"></div>
+      <div class="fb-row">Time: <span class="total">--</span></div>
       <div class="fb-hint">Press <b>R</b> to race again</div>
     </div>
 

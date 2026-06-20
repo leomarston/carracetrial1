@@ -3,14 +3,12 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { loadMap } from './MapLoader.js';
 import { Vehicle } from './Vehicle.js';
-import { Controls } from './Controls.js';
+import { Controls, P1_KEYS, P2_KEYS } from './Controls.js';
 import { ChaseCamera } from './ChaseCamera.js';
 import { Effects } from './Effects.js';
 import { AudioManager } from './AudioManager.js';
 import { RaceManager } from './RaceManager.js';
 import { Minimap } from './Minimap.js';
-import { AIDriver } from './AIDriver.js';
-import { buildCenterline, roadSamplesFromMeshes } from './trackPath.js';
 import { PhysicsWorld, buildTrimeshFromMeshes } from '../physics/PhysicsWorld.js';
 import { buildRoadEdgeWalls } from '../physics/roadWalls.js';
 
@@ -67,13 +65,13 @@ export class Game {
   }
 
   _initCamera() {
-    this.camera = new THREE.PerspectiveCamera(
-      60,
-      window.innerWidth / window.innerHeight,
-      0.1,
-      20000
-    );
+    // Two cameras for split-screen (top = P1, bottom = P2). Each viewport is the
+    // full width but half the height, so the aspect is width / (height / 2).
+    const aspect = window.innerWidth / (window.innerHeight / 2);
+    this.camera = new THREE.PerspectiveCamera(60, aspect, 0.1, 20000);
     this.camera.position.set(20, 20, 20);
+    this.camera2 = new THREE.PerspectiveCamera(60, aspect, 0.3, 12000);
+    this.camera2.position.set(20, 20, 20);
   }
 
   _initLights() {
@@ -129,7 +127,7 @@ export class Game {
   }
 
   /**
-   * Load the player car as a physics vehicle and switch to a chase camera.
+   * Player 1's car: a physics vehicle followed by the top-screen chase camera.
    * @param {object} carConfig  entry from cars.js (with a resolved `url`)
    * @param {{x:number, z:number, y?:number, heading?:number}} spawn
    */
@@ -139,7 +137,8 @@ export class Game {
     this.scene.add(car.object3D);
 
     this.car = car;
-    this.input = new Controls();
+    this.p1Spawn = spawn;
+    this.input = new Controls(P1_KEYS);
     this.chaseCam = new ChaseCamera(this.camera, car);
     this.effects = new Effects(this.scene, car);
     this.audio = new AudioManager(car);
@@ -150,70 +149,52 @@ export class Game {
     this.camera.near = 0.3;
     this.camera.far = 12000;
     this.camera.updateProjectionMatrix();
-
-    this.setDriving(true);
+    this.controls.enabled = false; // drive with the chase camera, not free orbit
 
     window.addEventListener('keydown', (e) => {
       const k = e.key.toLowerCase();
-      if (k === 'c') this.setDriving(!this.driving);
-      if (k === 'r' && this.car) {
-        this.car.resetTo(spawn.x, spawn.y ?? 0, spawn.z, spawn.heading ?? 0);
-        if (this.ai) {
-          const a = this.ai.spawn;
-          this.ai.car.resetTo(a.x, a.y ?? 0, a.z, a.heading ?? 0);
-          this.ai.driver.reset();
-        }
-        if (this.race) this.race.reset();
-      }
+      if (k === 'r') this._restart();
       if (k === 'p') { this.debugPhysics = !this.debugPhysics; this.physics.setDebug(this.scene, this.debugPhysics); }
     });
     return car;
   }
 
   /**
-   * Load the AI opponent: a second physics vehicle that follows a racing line
-   * derived from the road (the centerline around the loop centre).
+   * Player 2's car: a second physics vehicle followed by the bottom-screen chase
+   * camera, driven from the arrow keys.
    * @param {object} carConfig  entry from cars.js (with a resolved `url`)
-   * @param {object} track      the track def (for spawn/loopCenter/path)
+   * @param {{x:number, z:number, y?:number, heading?:number}} spawn
    */
-  async addAICar(carConfig, track) {
-    const spawn = track.aiSpawn;
-    const car = new Vehicle(this.physics, { ...carConfig, kinematic: true });
+  async addPlayer2(carConfig, spawn) {
+    const car = new Vehicle(this.physics, carConfig);
     await car.load(carConfig.url, spawn);
     this.scene.add(car.object3D);
-    car.syncVisual(0); // place object3D at the spawn so the AI seeds its index there
 
-    // Build the racing line from the same road meshes the walls/minimap use.
-    const roads = (this.mapMeshes ?? []).filter((m) => /Road2/i.test(m.name));
-    const samples = roadSamplesFromMeshes(roads);
-    const c = track.loopCenter;
-    const seedRadius = Math.hypot(track.spawn.x - c.x, track.spawn.z - c.z);
-    const seedAngle = Math.atan2(track.spawn.z - c.z, track.spawn.x - c.x);
-    const waypoints = buildCenterline(samples, {
-      center: c, seedRadius, seedAngle,
-      bins: track.path?.bins ?? 240, dir: track.path?.dir ?? -1,
-      gap: track.path?.gap, laneOffset: track.path?.laneOffset,
-    });
-    this.aiWaypoints = waypoints;
-
-    const driver = new AIDriver(car, waypoints, { skill: carConfig.aiSkill ?? 1 });
-    this.ai = { car, driver, spawn };
+    this.car2 = car;
+    this.p2Spawn = spawn;
+    this.input2 = new Controls(P2_KEYS);
+    this.chaseCam2 = new ChaseCamera(this.camera2, car);
+    this.effects2 = new Effects(this.scene, car);
     return car;
   }
 
-  setDriving(on) {
-    this.driving = on;
-    this.controls.enabled = !on;
-    if (!on && this.car) {
-      this.controls.target.copy(this.car.object3D.position);
-      this.controls.update();
+  /** Reset both cars to their grid slots and restart the race (the `R` key). */
+  _restart() {
+    if (this.car && this.p1Spawn) {
+      const s = this.p1Spawn;
+      this.car.resetTo(s.x, s.y ?? 0, s.z, s.heading ?? 0);
     }
+    if (this.car2 && this.p2Spawn) {
+      const s = this.p2Spawn;
+      this.car2.resetTo(s.x, s.y ?? 0, s.z, s.heading ?? 0);
+    }
+    if (this.race) this.race.reset();
   }
 
-  /** Set up the race (lap logic) + minimap for a track. Call after addCar (+ addAICar). */
+  /** Set up the race (lap logic) + minimap for a track. Call after both cars. */
   setupRace(track, minimapCanvas) {
     const entries = [{ car: this.car, name: this.car.name, isPlayer: true }];
-    if (this.ai) entries.push({ car: this.ai.car, name: this.ai.car.name, isPlayer: false });
+    if (this.car2) entries.push({ car: this.car2, name: this.car2.name, isPlayer: true });
     this.race = new RaceManager(track, entries);
     if (minimapCanvas) {
       const roads = (this.mapMeshes ?? []).filter((m) => /Road2/i.test(m.name));
@@ -282,32 +263,6 @@ export class Game {
     }
   }
 
-  /** Debug: drivable road x-spans at a given z (downward raycasts vs road meshes). */
-  roadSpansAt(z, x0 = -1600, x1 = 2340, step = 2) {
-    const roads = (this.mapMeshes ?? []).filter((m) => /Road2/i.test(m.name));
-    if (!this._ray) this._ray = new THREE.Raycaster();
-    const spans = [];
-    let open = null;
-    for (let x = x0; x <= x1; x += step) {
-      this._ray.set(new THREE.Vector3(x, 500, z), new THREE.Vector3(0, -1, 0));
-      this._ray.far = 1000;
-      const hit = this._ray.intersectObjects(roads, false).length > 0;
-      if (hit && open === null) open = x;
-      else if (!hit && open !== null) { spans.push([open, x - step]); open = null; }
-    }
-    if (open !== null) spans.push([open, x1]);
-    return spans;
-  }
-
-  /** Debug: is (x,z) over the road? (downward raycast vs road meshes). */
-  pointOnRoad(x, z) {
-    const roads = (this.mapMeshes ?? []).filter((m) => /Road2/i.test(m.name));
-    if (!this._ray) this._ray = new THREE.Raycaster();
-    this._ray.set(new THREE.Vector3(x, 500, z), new THREE.Vector3(0, -1, 0));
-    this._ray.far = 1000;
-    return this._ray.intersectObjects(roads, false).length > 0;
-  }
-
   /** Downward raycast against the map to find the ground height at (x,z). */
   _sampleGroundY(x, z) {
     if (!this._ray) this._ray = new THREE.Raycaster();
@@ -368,52 +323,70 @@ export class Game {
     const dt = this.timer.getDelta();
 
     if (this.car) {
-      // Hold every car at the line during the countdown; otherwise drive normally.
+      // Hold both cars at the line during the countdown; otherwise drive normally.
       const holding = this.race && this.race.phase === 'countdown';
       const HOLD = { throttle: 0, steer: 0, handbrake: true };
+      const read = (c) => ({ throttle: c.throttle, steer: c.steer, handbrake: c.handbrake });
 
       this.car.revving = holding;
-      this.car.setInput(holding
-        ? HOLD
-        : { throttle: this.input.throttle, steer: this.input.steer, handbrake: this.input.handbrake });
-
-      // The AI car is kinematic: once racing, it follows the racing line. During
-      // the countdown it just sits on the grid (no pose update needed).
-      if (this.ai) {
-        this.ai.car.revving = holding;
-        if (this.race && this.race.phase !== 'countdown') {
-          this.ai.car.setKinematicPose(this.ai.driver.update(dt));
-        }
+      this.car.setInput(holding ? HOLD : read(this.input));
+      if (this.car2) {
+        this.car2.revving = holding;
+        this.car2.setInput(holding ? HOLD : read(this.input2));
       }
 
-      // Step the physics (player vehicle dynamics; the kinematic AI moves with it).
-      this.physics.step(dt, (h) => this.car.fixedUpdate(h));
+      // Step the physics with both vehicles inside each fixed step.
+      this.physics.step(dt, (h) => {
+        this.car.fixedUpdate(h);
+        if (this.car2) this.car2.fixedUpdate(h);
+      });
       this.car.syncVisual(dt);
-      if (this.ai) this.ai.car.syncVisual(dt);
+      if (this.car2) this.car2.syncVisual(dt);
       this.effects.update(dt);
+      if (this.effects2) this.effects2.update(dt);
       this.audio.update();
       if (this.race) {
         this.race.update(dt);
         this._updateStartLights(this.race.startLights());
       }
-      if (this.minimap) this.minimap.update(this.car, this.race, this.ai && this.ai.car);
+      if (this.minimap) this.minimap.update(this.car, this.race, this.car2);
 
-      if (this.driving) this.chaseCam.update(dt);
-      else if (this.controls.enabled) this.controls.update();
+      this.chaseCam.update(dt);
+      if (this.chaseCam2) this.chaseCam2.update(dt);
     } else if (this.controls.enabled) {
       this.controls.update();
     }
 
     if (this.debugPhysics) this.physics.updateDebug();
     for (const e of this.updateables) e.update(dt);
-    this.renderer.render(this.scene, this.camera);
+
+    if (this.car2) this._renderSplit();
+    else this.renderer.render(this.scene, this.camera);
+  }
+
+  /** Render the scene twice: top half = player 1, bottom half = player 2. */
+  _renderSplit() {
+    const w = window.innerWidth, h = window.innerHeight, half = h / 2;
+    const r = this.renderer;
+    r.setScissorTest(true);
+    // Three's viewport origin is bottom-left, so the top half starts at y = half.
+    r.setViewport(0, half, w, half);
+    r.setScissor(0, half, w, half);
+    r.render(this.scene, this.camera);
+    r.setViewport(0, 0, w, half);
+    r.setScissor(0, 0, w, half);
+    r.render(this.scene, this.camera2);
+    r.setScissorTest(false);
   }
 
   _onResize() {
     const w = window.innerWidth;
     const h = window.innerHeight;
-    this.camera.aspect = w / h;
+    const aspect = w / (h / 2); // each split viewport is half-height
+    this.camera.aspect = aspect;
     this.camera.updateProjectionMatrix();
+    this.camera2.aspect = aspect;
+    this.camera2.updateProjectionMatrix();
     this.renderer.setSize(w, h);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   }

@@ -1,18 +1,19 @@
 /**
- * Race state machine for a circuit with one or more cars (player + AI): a
- * standing start (3-2-1-GO), per-car lap timing, live positions and a finish.
+ * Race state machine for a circuit with one or more cars (e.g. two split-screen
+ * players): a standing start (3-2-1-GO), per-car lap timing, live positions and a
+ * finish.
  *
  * Phases:
  *   'countdown' – all cars held at the line; lights count down; clock stopped.
  *   'racing'    – clock runs; every car's laps are counted.
- *   'finished'  – the player has completed all laps.
+ *   'finished'  – the first car to complete all laps has won.
  *
  * A lap counts for a car only when it crosses the start/finish line forward AND
  * has accumulated ~360° of angular progress around the loop centre since the last
  * crossing — robust, no hand-placed checkpoints, can't be cheated by reversing.
  *
- * Pure state (no DOM); the HUD, lights and car-hold read these fields. The
- * player-facing getters (currentLap, lapTime, …) report the player's entry.
+ * Pure state (no DOM); the HUD, lights and car-hold read these fields. Per-car
+ * state lives in `entries`; `winner` is the first to finish.
  */
 const COUNTDOWN_SECS = 3.2; // 3 … 2 … 1 … GO
 const GO_FLASH_SECS = 1.1;
@@ -28,8 +29,7 @@ export class RaceManager {
     this.totalLaps = track.laps;
     this.center = track.loopCenter;
     this.line = track.startLine;
-    this.entries = entries.map((e) => ({ car: e.car, name: e.name, isPlayer: !!e.isPlayer, ...freshState() }));
-    this.player = this.entries.find((e) => e.isPlayer) || this.entries[0];
+    this.entries = entries.map((e, i) => ({ car: e.car, name: e.name, index: i, isPlayer: !!e.isPlayer, ...freshState() }));
     this.reset();
   }
 
@@ -40,28 +40,18 @@ export class RaceManager {
     this.raceTime = 0;
     this.finishers = 0;
     this.justCrossed = 0;
+    this.winner = null;
     for (const e of this.entries) Object.assign(e, freshState());
     this._rank();
   }
 
-  // ---- player-facing getters (keep the existing HUD working) ----
-  get started() { return this.phase === 'racing' || this.player.finished; }
-  get currentLap() { return Math.min(this.player.lapsDone + 1, this.totalLaps); }
-  get lapTime() { return this.player.lapTime; }
-  get bestLap() { return this.player.bestLap; }
-  get finished() { return this.player.finished; }
-  get position() { return this.player.position; }
+  // ---- race-level getters ----
+  get started() { return this.phase === 'racing' || this.phase === 'finished'; }
+  get finished() { return !!this.winner; }
   get totalCars() { return this.entries.length; }
 
-  /** Live standings, best first. */
-  get standings() {
-    return [...this.entries]
-      .sort((a, b) => a.position - b.position)
-      .map((e) => ({ name: e.name, isPlayer: e.isPlayer, lapsDone: e.lapsDone, position: e.position, finished: e.finished }));
-  }
-
-  /** Did the player win (finished first)? Only meaningful once finished. */
-  get playerWon() { return this.player.finishOrder === 1; }
+  /** Per-car lap number (1-based, clamped to the total). */
+  lapOf(e) { return Math.min(e.lapsDone + 1, this.totalLaps); }
 
   /** HUD text for the countdown ("3"/"2"/"1"/"GO!") or '' when racing. */
   get countdownText() {
@@ -99,8 +89,11 @@ export class RaceManager {
     for (const e of this.entries) this._updateEntry(e, dt);
     this._rank();
 
-    // The race (and banner) ends when the player finishes their laps.
-    if (this.player.finished) this.phase = 'finished';
+    // The race ends as soon as the first car completes all laps — that's the winner.
+    if (!this.winner) {
+      const w = this.entries.find((e) => e.finished);
+      if (w) { this.winner = w; this.phase = 'finished'; }
+    }
   }
 
   _updateEntry(e, dt) {

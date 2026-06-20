@@ -1,46 +1,37 @@
 /**
- * Keyboard input for driving. Supports both WASD and arrow keys.
+ * Keyboard input for one driver, mapped by physical key code (so two players can
+ * share the keyboard without layout clashes and left/right modifiers are distinct).
  *
- *   throttle: +1 forward (W / ArrowUp), -1 reverse (S / ArrowDown)
- *   steer:    +1 left    (A / ArrowLeft), -1 right  (D / ArrowRight)
- *
- * (steer is positive-left so it maps directly to a +Y yaw rotation.)
+ *   throttle: +1 forward (up), -1 reverse (down)
+ *   steer:    +1 left, -1 right   (positive-left → maps directly to +Y yaw)
  */
 export class Controls {
-  constructor(target = window) {
-    this.keys = new Set();
-    this._onDown = (e) => {
-      const k = e.key.toLowerCase();
-      if (DRIVE_KEYS.has(k)) e.preventDefault();
-      this.keys.add(k);
-    };
-    this._onUp = (e) => this.keys.delete(e.key.toLowerCase());
-    target.addEventListener('keydown', this._onDown);
-    target.addEventListener('keyup', this._onUp);
-    // Release everything if the tab loses focus (avoids "stuck" keys).
-    window.addEventListener('blur', () => this.keys.clear());
+  /** @param {{up:string[],down:string[],left:string[],right:string[],handbrake:string[]}} map */
+  constructor(map) {
+    this.map = map;
+    this.codes = new Set();
+    const all = new Set([...map.up, ...map.down, ...map.left, ...map.right, ...map.handbrake]);
+    this._onDown = (e) => { if (all.has(e.code)) { e.preventDefault(); this.codes.add(e.code); } };
+    this._onUp = (e) => this.codes.delete(e.code);
+    window.addEventListener('keydown', this._onDown);
+    window.addEventListener('keyup', this._onUp);
+    window.addEventListener('blur', () => this.codes.clear()); // avoid stuck keys
   }
 
-  get throttle() {
-    let v = 0;
-    if (this.keys.has('w') || this.keys.has('arrowup')) v += 1;
-    if (this.keys.has('s') || this.keys.has('arrowdown')) v -= 1;
-    return v;
-  }
+  _any(list) { for (const c of list) if (this.codes.has(c)) return true; return false; }
 
-  get steer() {
-    let v = 0;
-    if (this.keys.has('a') || this.keys.has('arrowleft')) v += 1;
-    if (this.keys.has('d') || this.keys.has('arrowright')) v -= 1;
-    return v;
-  }
-
-  get handbrake() {
-    return this.keys.has(' ');
-  }
+  get throttle() { return (this._any(this.map.up) ? 1 : 0) + (this._any(this.map.down) ? -1 : 0); }
+  get steer() { return (this._any(this.map.left) ? 1 : 0) + (this._any(this.map.right) ? -1 : 0); }
+  get handbrake() { return this._any(this.map.handbrake); }
 }
 
-const DRIVE_KEYS = new Set([
-  'w', 'a', 's', 'd',
-  'arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' ',
-]);
+/** Player 1: WASD + Space. */
+export const P1_KEYS = {
+  up: ['KeyW'], down: ['KeyS'], left: ['KeyA'], right: ['KeyD'], handbrake: ['Space'],
+};
+
+/** Player 2: arrow keys + Right-Shift / Right-Ctrl / Numpad-0. */
+export const P2_KEYS = {
+  up: ['ArrowUp'], down: ['ArrowDown'], left: ['ArrowLeft'], right: ['ArrowRight'],
+  handbrake: ['ShiftRight', 'ControlRight', 'Numpad0'],
+};

@@ -7,18 +7,15 @@ import { formatTime } from './game/RaceManager.js';
 // Assets live in /public so they are served verbatim (never bundled/transformed).
 const base = import.meta.env.BASE_URL;
 const MAP_URL = `${base}models/carracemap1.glb`;
-const CAR = { ...CARS.f1, url: `${base}${CARS.f1.url}` };
-const AI_CAR = { ...CARS.lambo, url: `${base}${CARS.lambo.url}` };
+const P1_CAR = { ...CARS.f1, url: `${base}${CARS.f1.url}` };
+const P2_CAR = { ...CARS.lambo, url: `${base}${CARS.lambo.url}` };
 const TRACK = { ...TRACKS.highway, gantry: { ...TRACKS.highway.gantry, url: `${base}${TRACKS.highway.gantry.url}` } };
-const CAR_SPAWN = TRACK.spawn;
 
 const overlay = document.getElementById('loading-overlay');
 const progressBar = document.getElementById('progress-bar');
 const status = document.getElementById('loading-status');
-const hud = document.getElementById('hud');
-const mapStatsEl = document.getElementById('map-stats');
-const speedEl = document.getElementById('speedo');
-const speedoWrap = document.getElementById('speedo-wrap');
+
+const ORDINAL = ['', '1st', '2nd', '3rd', '4th'];
 
 async function boot() {
   status.textContent = 'Initialising physics…';
@@ -36,11 +33,11 @@ async function boot() {
     }
   });
 
-  status.textContent = 'Loading car…';
-  const car = await game.addCar(CAR, CAR_SPAWN);
+  status.textContent = 'Loading Player 1 car…';
+  await game.addCar(P1_CAR, TRACK.spawn);
 
-  status.textContent = 'Loading rival…';
-  await game.addAICar(AI_CAR, TRACK);
+  status.textContent = 'Loading Player 2 car…';
+  await game.addPlayer2(P2_CAR, TRACK.p2Spawn);
 
   status.textContent = 'Placing start/finish line…';
   await game.addStartFinishGantry(TRACK.gantry);
@@ -48,42 +45,31 @@ async function boot() {
 
   progressBar.style.width = '100%';
   overlay.classList.add('hidden');
-  hud.classList.remove('hidden');
-  speedoWrap.classList.remove('hidden');
-  document.getElementById('race-hud').classList.remove('hidden');
-  document.getElementById('minimap-wrap').classList.remove('hidden');
+  for (const id of ['controls-hint', 'p1-hud', 'p2-hud', 'divider', 'minimap-wrap']) {
+    document.getElementById(id).classList.remove('hidden');
+  }
 
-  mapStatsEl.innerHTML = [
-    `<strong>${stats.title}</strong>`,
-    `Race the <b>${AI_CAR.name}</b> — 2 laps, beat the AI!`,
-    `<b>W/A/S/D</b> drive · <b>Space</b> handbrake · <b>R</b> restart · <b>C</b> free cam`,
-  ].join('<br/>');
-
-  renderCarStats(car);
-
-  // HUD: speedometer / gear / tach + race (laps & timing).
-  const gearEl = document.getElementById('gear');
-  const rpmBar = document.getElementById('rpm-bar');
-  const posEl = document.getElementById('position');
-  const lapEl = document.getElementById('lap-count');
-  const curEl = document.getElementById('lap-time');
-  const bestEl = document.getElementById('best-time');
+  // Per-player HUD cells.
+  const p1 = hudCells('p1-hud');
+  const p2 = hudCells('p2-hud');
   const banner = document.getElementById('finish-banner');
   const cdEl = document.getElementById('countdown');
   let lastCd = '';
+
+  const setPlayer = (cells, entry, race) => {
+    const c = entry.car;
+    cells.kmh.textContent = Math.abs(c.speed * 3.6).toFixed(0);
+    cells.gear.textContent = c.gear === 0 ? 'R' : `${c.gear}`;
+    cells.lap.textContent = `LAP ${race.lapOf(entry)}/${race.totalLaps}`;
+    cells.pos.textContent = race.started ? ORDINAL[entry.position] : '—';
+    cells.pos.style.color = entry.position === 1 ? '#46d36a' : '#ff9f43';
+  };
+
   const updateHud = () => {
-    const c = game.car, r = game.race;
-    if (c) {
-      speedEl.textContent = `${Math.abs(c.speed * 3.6).toFixed(0)} km/h`;
-      gearEl.textContent = c.gear === 0 ? 'R' : `${c.gear}`;
-      rpmBar.style.width = `${Math.min(100, (c.rpm / c.engine.redline) * 100).toFixed(0)}%`;
-    }
+    const r = game.race;
     if (r) {
-      posEl.innerHTML = `P${r.position}<span class="pos-total">/${r.totalCars}</span>`;
-      posEl.classList.toggle('leading', r.position === 1);
-      lapEl.textContent = `LAP ${r.currentLap}/${r.totalLaps}`;
-      curEl.textContent = r.started ? formatTime(r.lapTime) : '—';
-      bestEl.textContent = r.bestLap ? `best ${formatTime(r.bestLap)}` : '';
+      setPlayer(p1, r.entries[0], r);
+      if (r.entries[1]) setPlayer(p2, r.entries[1], r);
 
       // Countdown overlay (re-trigger the pop animation each time it changes).
       const t = r.countdownText;
@@ -102,15 +88,10 @@ async function boot() {
       }
 
       if (r.finished && banner.classList.contains('hidden')) {
-        const won = r.playerWon;
-        const title = banner.querySelector('.fb-title');
-        title.textContent = won ? 'YOU WIN! 🏆' : 'YOU LOSE 🏁';
-        title.classList.toggle('lose', !won);
-        banner.querySelector('.result').textContent = won
-          ? `P1 of ${r.totalCars} — beat the ${AI_CAR.name}`
-          : `P${r.position} of ${r.totalCars} — the ${AI_CAR.name} took it`;
-        banner.querySelector('.total').textContent = formatTime(r.raceTime);
-        banner.querySelector('.best').textContent = r.bestLap ? `Best lap ${formatTime(r.bestLap)}` : '';
+        const w = r.winner;
+        banner.querySelector('.fb-title').textContent = `PLAYER ${w.index + 1} WINS! 🏆`;
+        banner.querySelector('.result').textContent = `${w.name}`;
+        banner.querySelector('.total').textContent = formatTime(w.finishTime);
         banner.classList.remove('hidden');
       } else if (!r.finished && !banner.classList.contains('hidden')) {
         banner.classList.add('hidden'); // hidden again after reset (R)
@@ -121,30 +102,17 @@ async function boot() {
   updateHud();
 
   window.__game = game;
-  console.info('[carrace] Race ready.', { laps: TRACK.laps });
+  console.info('[carrace] Split-screen race ready.', { laps: TRACK.laps });
 }
 
-function renderCarStats(car) {
-  const el = document.getElementById('car-stats');
-  if (!el) return;
-  const rows = [
-    ['speed', 'Speed'],
-    ['acceleration', 'Acceleration'],
-    ['grip', 'Grip · Yol tutuşu'],
-    ['braking', 'Braking'],
-    ['handling', 'Handling'],
-  ];
-  el.innerHTML =
-    `<div class="car-name">${car.name}</div>` +
-    rows
-      .map(([k, label]) => {
-        const v = car.stats[k] ?? 0;
-        return `<div class="stat"><span class="stat-lbl">${label}</span>` +
-          `<span class="stat-bar"><span style="width:${v * 10}%"></span></span>` +
-          `<span class="stat-val">${v}</span></div>`;
-      })
-      .join('');
-  el.classList.remove('hidden');
+function hudCells(rootId) {
+  const root = document.getElementById(rootId);
+  return {
+    kmh: root.querySelector('.ph-kmh'),
+    gear: root.querySelector('.ph-gear'),
+    lap: root.querySelector('.ph-lap'),
+    pos: root.querySelector('.ph-pos'),
+  };
 }
 
 boot().catch((err) => {

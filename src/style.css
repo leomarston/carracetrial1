@@ -86,211 +86,116 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* ---- HUD ---- */
-#hud {
+/* ---- Controls hint ---- */
+#controls-hint {
   position: fixed;
-  top: 14px;
-  left: 14px;
-  z-index: 10;
-  pointer-events: none;
-  transition: opacity 0.4s ease;
-}
-
-#hud.hidden {
-  opacity: 0;
-}
-
-#map-stats {
+  top: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
   font-size: 0.72rem;
-  line-height: 1.5;
-  opacity: 0.55;
-  font-variant-numeric: tabular-nums;
-  background: rgba(0, 0, 0, 0.35);
-  padding: 8px 10px;
+  opacity: 0.65;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 4px 12px;
   border-radius: 8px;
+  white-space: nowrap;
+  pointer-events: none;
   backdrop-filter: blur(4px);
 }
 
-/* ---- Speedometer ---- */
-#speedo-wrap {
+#controls-hint.hidden { display: none; }
+
+/* ---- Per-player HUD (top half = P1, bottom half = P2) ---- */
+.player-hud {
   position: fixed;
-  bottom: 18px;
-  left: 18px;
-  z-index: 10;
+  left: 14px;
+  z-index: 12;
   pointer-events: none;
-  background: rgba(0, 0, 0, 0.4);
-  padding: 10px 16px;
+  background: rgba(0, 0, 0, 0.42);
+  padding: 8px 12px;
   border-radius: 10px;
   backdrop-filter: blur(4px);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  transition: opacity 0.4s ease;
+  min-width: 158px;
 }
 
-#speedo-wrap.hidden {
-  opacity: 0;
+.player-hud.hidden { display: none; }
+#p1-hud { top: 12px; }
+#p2-hud { bottom: 12px; }
+
+.ph-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 800;
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
 }
 
-.readout {
+.ph-tag {
+  background: #39c5ff;
+  color: #04222e;
+  padding: 1px 7px;
+  border-radius: 5px;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.ph-tag.p2 { background: #ff7a3d; color: #2a1000; }
+.ph-lap { color: #fff; opacity: 0.9; }
+.ph-pos { margin-left: auto; font-weight: 900; color: #46d36a; }
+
+.ph-speed {
   display: flex;
   align-items: baseline;
-  gap: 12px;
+  gap: 6px;
+  margin-top: 5px;
 }
 
-#speedo {
-  font-size: 1.6rem;
+.ph-kmh {
+  font-size: 1.55rem;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   color: var(--accent);
 }
 
-#gear {
-  font-size: 1.1rem;
+.ph-unit { font-size: 0.7rem; opacity: 0.6; }
+.ph-gear {
+  margin-left: auto;
+  font-size: 1rem;
   font-weight: 800;
-  color: #fff;
   opacity: 0.85;
   min-width: 1.2em;
   text-align: center;
 }
 
-#rpm-track {
-  margin-top: 7px;
-  width: 150px;
-  height: 5px;
-  background: rgba(255, 255, 255, 0.12);
-  border-radius: 999px;
-  overflow: hidden;
-}
-
-#rpm-bar {
-  width: 0%;
-  height: 100%;
-  background: linear-gradient(90deg, #46d36a, #f0c020 70%, #ff3b30 92%);
-  transition: width 0.06s linear;
-}
-
-/* ---- Car stats panel ---- */
-#car-stats {
+/* ---- Split-screen divider ---- */
+#divider {
   position: fixed;
-  top: 14px;
-  right: 14px;
-  z-index: 10;
-  width: 210px;
-  background: rgba(0, 0, 0, 0.4);
-  padding: 10px 12px;
-  border-radius: 10px;
-  backdrop-filter: blur(4px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  transition: opacity 0.4s ease;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 0;
+  z-index: 15;
+  border-top: 3px solid rgba(0, 0, 0, 0.85);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18);
+  pointer-events: none;
 }
 
-#car-stats.hidden {
-  opacity: 0;
-}
+#divider.hidden { display: none; }
 
-#car-stats .car-name {
-  font-weight: 800;
-  font-size: 0.95rem;
-  margin-bottom: 8px;
-  color: var(--accent);
-  letter-spacing: 0.04em;
-}
-
-#car-stats .stat {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  margin: 4px 0;
-  font-size: 0.66rem;
-}
-
-#car-stats .stat-lbl {
-  flex: 0 0 92px;
-  opacity: 0.8;
-}
-
-#car-stats .stat-bar {
-  flex: 1;
-  height: 6px;
-  background: rgba(255, 255, 255, 0.12);
-  border-radius: 999px;
-  overflow: hidden;
-}
-
-#car-stats .stat-bar > span {
-  display: block;
-  height: 100%;
-  background: linear-gradient(90deg, #46d36a, #f0c020 75%, #ff3b30);
-  border-radius: 999px;
-}
-
-#car-stats .stat-val {
-  flex: 0 0 14px;
-  text-align: right;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-}
-
-/* ---- Race HUD (lap + timing) ---- */
-#race-hud {
-  position: fixed;
-  top: 14px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 10;
-  text-align: center;
-  background: rgba(0, 0, 0, 0.4);
-  padding: 8px 18px;
-  border-radius: 10px;
-  backdrop-filter: blur(4px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  transition: opacity 0.4s ease;
-}
-
-#race-hud.hidden { opacity: 0; }
-
-#position {
-  font-size: 1.5rem;
-  font-weight: 900;
-  letter-spacing: 0.06em;
-  color: #fff;
-  line-height: 1;
-  margin-bottom: 2px;
-}
-
-#position.leading { color: #46d36a; }
-#position .pos-total { font-size: 0.85rem; font-weight: 700; opacity: 0.6; }
-
-#lap-count {
-  font-size: 1.1rem;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  color: #fff;
-}
-
-#lap-time {
-  font-size: 1.05rem;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  color: var(--accent);
-}
-
-#best-time {
-  font-size: 0.72rem;
-  opacity: 0.7;
-  font-variant-numeric: tabular-nums;
-}
-
-/* ---- Minimap ---- */
+/* ---- Minimap (centered on the right edge, both players glance to it) ---- */
 #minimap-wrap {
   position: fixed;
-  bottom: 34px;
   right: 12px;
-  z-index: 10;
-  background: rgba(0, 0, 0, 0.4);
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 16;
+  background: rgba(0, 0, 0, 0.45);
   padding: 6px;
   border-radius: 10px;
   backdrop-filter: blur(4px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   transition: opacity 0.4s ease;
 }
 
