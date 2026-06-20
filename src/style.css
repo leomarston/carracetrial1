@@ -230,6 +230,95 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+/* ---- Race HUD (lap + timing) ---- */
+#race-hud {
+  position: fixed;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  text-align: center;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 8px 18px;
+  border-radius: 10px;
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: opacity 0.4s ease;
+}
+
+#race-hud.hidden { opacity: 0; }
+
+#lap-count {
+  font-size: 1.3rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: #fff;
+}
+
+#lap-time {
+  font-size: 1.05rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+}
+
+#best-time {
+  font-size: 0.72rem;
+  opacity: 0.7;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- Minimap ---- */
+#minimap-wrap {
+  position: fixed;
+  bottom: 34px;
+  right: 12px;
+  z-index: 10;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 6px;
+  border-radius: 10px;
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: opacity 0.4s ease;
+}
+
+#minimap-wrap.hidden { opacity: 0; }
+#minimap { display: block; }
+
+/* ---- Finish banner ---- */
+#finish-banner {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: rgba(6, 8, 11, 0.72);
+  backdrop-filter: blur(6px);
+}
+
+#finish-banner.hidden { display: none; }
+
+.fb-title {
+  font-size: clamp(2rem, 7vw, 3.5rem);
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  background: linear-gradient(90deg, #fff, var(--accent));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.fb-row {
+  font-size: 1.2rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.fb-row .total, .fb-row.best { color: var(--accent); font-weight: 800; }
+.fb-hint { margin-top: 10px; opacity: 0.7; font-size: 0.9rem; }
+
 /* ---- Attribution (CC-BY-4.0 requirement) ---- */
 #attribution {
   position: fixed;

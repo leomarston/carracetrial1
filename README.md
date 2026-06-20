@@ -20,6 +20,12 @@ A 3D car racing game built with [Three.js](https://threejs.org/), the
   reduced grip, lower yaw damping and heavier steering, so it slides when pushed
   (stable in a straight line, demanding through corners). Grip/feel are all just
   numbers in `statsToTuning()`.
+- **Race (done).** A start/finish gantry spans the track, the car starts behind
+  it, and there's a **2-lap race** with a **minimap** and lap/total/best-lap
+  timing. Tracks are defined in `src/game/tracks.js`; lap logic
+  (`RaceManager.js`) counts a lap only when you cross the line *and* have gone a
+  full ~360° around the loop (no cheating, no hand-placed checkpoints). `R`
+  restarts the race.
 
 ## Getting started
 
@@ -97,8 +103,10 @@ car is ~2.8 m wide, realistic for an F1).
   [amogusstrikesback2](https://sketchfab.com/amogusstrikesback2).
 - **Car:** "Low Poly F1 Car" by
   [Straight Design](https://sketchfab.com/creativemango).
+- **Start/Finish gantry:** "Race drag Start and Finish Line" by
+  [rohit143r](https://sketchfab.com/rohit143r).
 
-Both on [Sketchfab](https://sketchfab.com/), licensed under
+All on [Sketchfab](https://sketchfab.com/), licensed under
 [CC-BY-4.0](http://creativecommons.org/licenses/by/4.0/). The map attribution is
 also shown in-game (bottom-right).
 

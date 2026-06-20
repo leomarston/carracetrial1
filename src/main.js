@@ -1,18 +1,15 @@
 import RAPIER from '@dimforge/rapier3d-compat';
 import { Game } from './game/Game.js';
 import { CARS } from './game/cars.js';
+import { TRACKS } from './game/tracks.js';
+import { formatTime } from './game/RaceManager.js';
 
 // Assets live in /public so they are served verbatim (never bundled/transformed).
-const MAP_URL = `${import.meta.env.BASE_URL}models/carracemap1.glb`;
-const CAR = { ...CARS.f1, url: `${import.meta.env.BASE_URL}${CARS.f1.url}` };
-
-// Start line: on the highway under the "CRESCENT CITY NORTH" gantry, facing down
-// the map's longest straight. Lanes are ~7 units wide; spawn centred in a lane.
-const LEFT_LINE_X = 2285.5;
-const LANE_WIDTH = 7.1;
-const LANE_INDEX = 3; // a central lane
-const LANE_CENTER_X = LEFT_LINE_X + LANE_WIDTH * (LANE_INDEX + 0.5);
-const CAR_SPAWN = { x: LANE_CENTER_X, z: 50.5, y: 0.8, heading: -Math.PI };
+const base = import.meta.env.BASE_URL;
+const MAP_URL = `${base}models/carracemap1.glb`;
+const CAR = { ...CARS.f1, url: `${base}${CARS.f1.url}` };
+const TRACK = { ...TRACKS.highway, gantry: { ...TRACKS.highway.gantry, url: `${base}${TRACKS.highway.gantry.url}` } };
+const CAR_SPAWN = TRACK.spawn;
 
 const overlay = document.getElementById('loading-overlay');
 const progressBar = document.getElementById('progress-bar');
@@ -41,35 +38,56 @@ async function boot() {
   status.textContent = 'Loading car…';
   const car = await game.addCar(CAR, CAR_SPAWN);
 
+  status.textContent = 'Placing start/finish line…';
+  await game.addStartFinishGantry(TRACK.gantry);
+  game.setupRace(TRACK, document.getElementById('minimap'));
+
   progressBar.style.width = '100%';
   overlay.classList.add('hidden');
   hud.classList.remove('hidden');
   speedoWrap.classList.remove('hidden');
+  document.getElementById('race-hud').classList.remove('hidden');
+  document.getElementById('minimap-wrap').classList.remove('hidden');
 
   mapStatsEl.innerHTML = [
     `<strong>${stats.title}</strong>`,
-    `<b>W/A/S/D</b> drive · <b>Space</b> handbrake · <b>R</b> reset · <b>C</b> free cam`,
+    `<b>W/A/S/D</b> drive · <b>Space</b> handbrake · <b>R</b> restart · <b>C</b> free cam`,
   ].join('<br/>');
 
-  // Car stats panel (ratings out of 10).
   renderCarStats(car);
 
-  // Live speedometer / gear / tachometer.
+  // HUD: speedometer / gear / tach + race (laps & timing).
   const gearEl = document.getElementById('gear');
   const rpmBar = document.getElementById('rpm-bar');
+  const lapEl = document.getElementById('lap-count');
+  const curEl = document.getElementById('lap-time');
+  const bestEl = document.getElementById('best-time');
+  const banner = document.getElementById('finish-banner');
   const updateHud = () => {
-    const c = game.car;
+    const c = game.car, r = game.race;
     if (c) {
       speedEl.textContent = `${Math.abs(c.speed * 3.6).toFixed(0)} km/h`;
       gearEl.textContent = c.gear === 0 ? 'R' : `${c.gear}`;
       rpmBar.style.width = `${Math.min(100, (c.rpm / c.engine.redline) * 100).toFixed(0)}%`;
+    }
+    if (r) {
+      lapEl.textContent = `LAP ${r.currentLap}/${r.totalLaps}`;
+      curEl.textContent = r.started ? formatTime(r.lapTime) : 'cross the line to start';
+      bestEl.textContent = r.bestLap ? `best ${formatTime(r.bestLap)}` : '';
+      if (r.finished && banner.classList.contains('hidden')) {
+        banner.querySelector('.total').textContent = formatTime(r.raceTime);
+        banner.querySelector('.best').textContent = r.bestLap ? `Best lap ${formatTime(r.bestLap)}` : '';
+        banner.classList.remove('hidden');
+      } else if (!r.finished && !banner.classList.contains('hidden')) {
+        banner.classList.add('hidden'); // hidden again after reset (R)
+      }
     }
     requestAnimationFrame(updateHud);
   };
   updateHud();
 
   window.__game = game;
-  console.info('[carrace] Physics vehicle ready.', { carSize: car.size });
+  console.info('[carrace] Race ready.', { laps: TRACK.laps });
 }
 
 function renderCarStats(car) {

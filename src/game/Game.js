@@ -1,11 +1,14 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { loadMap } from './MapLoader.js';
 import { Vehicle } from './Vehicle.js';
 import { Controls } from './Controls.js';
 import { ChaseCamera } from './ChaseCamera.js';
 import { Effects } from './Effects.js';
 import { AudioManager } from './AudioManager.js';
+import { RaceManager } from './RaceManager.js';
+import { Minimap } from './Minimap.js';
 import { PhysicsWorld, buildTrimeshFromMeshes } from '../physics/PhysicsWorld.js';
 import { buildRoadEdgeWalls } from '../physics/roadWalls.js';
 
@@ -147,7 +150,10 @@ export class Game {
     window.addEventListener('keydown', (e) => {
       const k = e.key.toLowerCase();
       if (k === 'c') this.setDriving(!this.driving);
-      if (k === 'r' && this.car) this.car.resetTo(spawn.x, spawn.y ?? 0, spawn.z, spawn.heading ?? 0);
+      if (k === 'r' && this.car) {
+        this.car.resetTo(spawn.x, spawn.y ?? 0, spawn.z, spawn.heading ?? 0);
+        if (this.race) this.race.reset();
+      }
       if (k === 'p') { this.debugPhysics = !this.debugPhysics; this.physics.setDebug(this.scene, this.debugPhysics); }
     });
     return car;
@@ -160,6 +166,54 @@ export class Game {
       this.controls.target.copy(this.car.object3D.position);
       this.controls.update();
     }
+  }
+
+  /** Set up the race (lap logic) + minimap for a track. Call after addCar. */
+  setupRace(track, minimapCanvas) {
+    this.race = new RaceManager(this.car, track);
+    if (minimapCanvas) {
+      const roads = (this.mapMeshes ?? []).filter((m) => /Road2/i.test(m.name));
+      this.minimap = new Minimap(minimapCanvas, roads, track);
+    }
+    return this.race;
+  }
+
+  /** Load the start/finish gantry asset and place it across the road on the line. */
+  async addStartFinishGantry(cfg) {
+    const gltf = await new Promise((res, rej) => new GLTFLoader().load(cfg.url, res, undefined, rej));
+    const model = gltf.scene;
+    model.updateWorldMatrix(true, true);
+    let size = new THREE.Box3().setFromObject(model).getSize(new THREE.Vector3());
+    const longest = Math.max(size.x, size.y, size.z); // the span axis
+    model.scale.setScalar(cfg.span / longest);
+    model.rotation.y = cfg.rotationY ?? 0;
+
+    // Recenter horizontally and sit the base on the road.
+    model.updateWorldMatrix(true, true);
+    const box = new THREE.Box3().setFromObject(model);
+    const center = box.getCenter(new THREE.Vector3());
+    model.position.x -= center.x;
+    model.position.z -= center.z;
+    model.position.y -= box.min.y;
+    model.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = false; } });
+
+    const wrapper = new THREE.Group();
+    wrapper.name = 'StartFinishGantry';
+    wrapper.add(model);
+    const y = this._sampleGroundY(cfg.x, cfg.z) ?? 0.8;
+    wrapper.position.set(cfg.x, y, cfg.z);
+    this.scene.add(wrapper);
+    this.startGantry = wrapper;
+    return wrapper;
+  }
+
+  /** Downward raycast against the map to find the ground height at (x,z). */
+  _sampleGroundY(x, z) {
+    if (!this._ray) this._ray = new THREE.Raycaster();
+    this._ray.set(new THREE.Vector3(x, 500, z), new THREE.Vector3(0, -1, 0));
+    this._ray.far = 1000;
+    const hit = this._ray.intersectObjects(this.mapMeshes ?? [], false)[0];
+    return hit ? hit.point.y : null;
   }
 
   /** Position camera + controls so the whole map is comfortably in view. */
@@ -223,6 +277,8 @@ export class Game {
       this.car.syncVisual(dt);
       this.effects.update(dt);
       this.audio.update();
+      if (this.race) this.race.update(dt);
+      if (this.minimap) this.minimap.update(this.car, this.race);
 
       if (this.driving) this.chaseCam.update(dt);
       else if (this.controls.enabled) this.controls.update();
