@@ -733,3 +733,279 @@ body {
   35% { opacity: 1; transform: scale(1); }
   100% { opacity: 1; transform: scale(1.05); }
 }
+
+/* ============================================================================
+   MAIN MENU (first screen). Full-screen background (src/image2.png) with a
+   racing-game icon selector: RACE / SETTINGS / QUIT, a graffiti "main menu"
+   heading, and a key-chip action bar.
+   ========================================================================== */
+#main-menu {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  overflow: hidden;
+  transition: opacity 0.45s ease;
+  font-family: var(--cs-display);
+  color: #fff;
+}
+#main-menu.hidden { opacity: 0; pointer-events: none; }
+
+.mm-bg {
+  position: absolute;
+  inset: 0;
+  background: #04060a url("./image2.png") center / cover no-repeat;
+}
+/* Darken the lower band so the selector + labels read cleanly. */
+.mm-scrim {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(2, 4, 8, 0.35) 0%, rgba(2, 4, 8, 0) 22%),
+    linear-gradient(0deg, rgba(2, 4, 8, 0.9) 0%, rgba(2, 4, 8, 0.45) 26%, rgba(2, 4, 8, 0) 52%);
+}
+
+/* "main menu" graffiti heading, sat above-right of the selector. */
+.mm-heading {
+  position: absolute;
+  right: clamp(6%, 12vw, 16%);
+  top: 54%;
+  font-family: "Permanent Marker", var(--cs-display);
+  font-weight: 400;
+  font-size: clamp(2rem, 5.5vw, 4.4rem);
+  line-height: 1;
+  color: #f3f6fa;
+  transform: rotate(-5deg);
+  text-shadow: 0 3px 0 rgba(0, 0, 0, 0.45), 0 0 24px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+}
+
+/* Horizontal icon selector. */
+.mm-selector {
+  position: absolute;
+  left: 50%;
+  top: 72%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: clamp(10px, 2vw, 26px);
+}
+.mm-arrow {
+  cursor: pointer;
+  background: none;
+  border: none;
+  color: var(--cs-amber);
+  font-size: clamp(2rem, 4.4vw, 3.4rem);
+  font-weight: 800;
+  line-height: 1;
+  padding: 0 6px;
+  text-shadow: 0 0 12px rgba(255, 190, 40, 0.55), 0 2px 4px rgba(0, 0, 0, 0.7);
+  transition: transform 0.12s ease, color 0.12s ease;
+}
+.mm-arrow:hover { transform: scale(1.2); color: #fff; }
+
+.mm-nodes { display: flex; align-items: center; gap: clamp(18px, 4vw, 60px); }
+.mm-node {
+  position: relative;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: clamp(8px, 1.4vw, 16px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #cfd9e2;
+  opacity: 0.5;
+  filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.7));
+  transition: opacity 0.15s ease, transform 0.15s ease, color 0.15s ease;
+}
+.mm-node svg {
+  width: clamp(40px, 4.6vw, 66px);
+  height: auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.mm-node svg .mm-fill { fill: currentColor; stroke: none; }
+.mm-node:hover { opacity: 0.85; }
+.mm-node.is-sel {
+  opacity: 1;
+  color: #ffffff;
+  transform: scale(1.08);
+}
+/* Dashed reticle around the selected icon (like the screenshot's bracket). */
+.mm-node.is-sel::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border: 2px dashed var(--cs-amber);
+  border-radius: 4px;
+  box-shadow: 0 0 14px rgba(255, 190, 40, 0.4);
+  animation: mm-reticle 1.4s ease-in-out infinite;
+}
+@keyframes mm-reticle { 0%, 100% { opacity: 0.95; } 50% { opacity: 0.45; } }
+
+.mm-node.mm-deny { animation: mm-deny 0.34s ease; }
+@keyframes mm-deny {
+  0%, 100% { transform: translateX(0) scale(1.08); }
+  25% { transform: translateX(-5px) scale(1.08); }
+  75% { transform: translateX(5px) scale(1.08); }
+}
+
+/* Big graffiti label of the current selection, under the row. */
+.mm-sel-label {
+  position: absolute;
+  left: 50%;
+  top: 84%;
+  transform: translateX(-50%);
+  font-family: "Permanent Marker", var(--cs-display);
+  font-weight: 400;
+  font-size: clamp(1.6rem, 4vw, 3rem);
+  letter-spacing: 0.02em;
+  color: #fff;
+  text-shadow: 0 3px 0 rgba(0, 0, 0, 0.5), 0 0 20px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/* Bottom-left key-chip action bar. */
+.mm-actionbar {
+  position: absolute;
+  left: clamp(16px, 3vw, 42px);
+  bottom: clamp(14px, 3vh, 30px);
+  display: flex;
+  gap: clamp(12px, 2vw, 26px);
+  align-items: center;
+}
+.mm-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--cs-display);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  font-size: clamp(0.7rem, 1.3vw, 0.95rem);
+  color: #e8eef4;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+.mm-key b {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.7em;
+  padding: 2px 7px;
+  font-weight: 800;
+  color: #fff;
+  background: rgba(10, 14, 20, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.5);
+}
+
+/* ---- Settings panel (sound effects, for now) ---- */
+.mm-panel {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(3, 5, 9, 0.72);
+  backdrop-filter: blur(4px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+#main-menu.mm-settings-open .mm-panel { opacity: 1; pointer-events: auto; }
+
+.mm-panel-box {
+  width: clamp(300px, 44vw, 560px);
+  padding: clamp(20px, 3vw, 40px);
+  background: linear-gradient(180deg, rgba(14, 19, 26, 0.96), rgba(8, 11, 16, 0.96));
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), inset 0 0 0 1px rgba(255, 200, 60, 0.12);
+}
+.mm-panel-title {
+  font-family: var(--cs-display);
+  font-weight: 800;
+  font-style: italic;
+  font-size: clamp(1.6rem, 3.4vw, 2.4rem);
+  letter-spacing: 0.08em;
+  color: var(--cs-amber);
+  transform: skewX(-8deg);
+  margin-bottom: clamp(16px, 2.4vw, 28px);
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+}
+.mm-row {
+  display: flex;
+  align-items: center;
+  gap: clamp(10px, 1.6vw, 18px);
+  padding: clamp(8px, 1.4vh, 14px) 0;
+}
+.mm-row-lbl {
+  flex: 0 0 auto;
+  min-width: 9.5em;
+  font-family: var(--cs-display);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  font-size: clamp(0.85rem, 1.6vw, 1.1rem);
+  color: #eef4fa;
+}
+.mm-row-val {
+  flex: 0 0 auto;
+  min-width: 3em;
+  text-align: right;
+  font-family: var(--cs-text);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  font-size: clamp(0.85rem, 1.6vw, 1.05rem);
+  color: var(--cs-amber);
+}
+
+/* Range slider styled to the amber/green theme. */
+.mm-slider {
+  flex: 1 1 auto;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 10px;
+  background: linear-gradient(90deg, var(--cs-amber) 0 var(--mm-fill, 100%), rgba(255, 255, 255, 0.14) var(--mm-fill, 100%));
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  outline: none;
+  cursor: pointer;
+}
+.mm-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 22px;
+  background: linear-gradient(180deg, #fff, #cfd7df);
+  border: 1px solid #2a2f36;
+  box-shadow: 0 0 8px rgba(255, 200, 60, 0.6);
+  cursor: pointer;
+}
+.mm-slider::-moz-range-thumb {
+  width: 16px;
+  height: 22px;
+  background: linear-gradient(180deg, #fff, #cfd7df);
+  border: 1px solid #2a2f36;
+  box-shadow: 0 0 8px rgba(255, 200, 60, 0.6);
+  cursor: pointer;
+}
+
+.mm-back {
+  margin-top: clamp(16px, 2.4vw, 28px);
+  cursor: pointer;
+  font-family: var(--cs-display);
+  font-weight: 800;
+  font-style: italic;
+  letter-spacing: 0.08em;
+  font-size: clamp(0.9rem, 1.7vw, 1.15rem);
+  padding: 8px 22px;
+  transform: skewX(-10deg);
+  color: var(--cs-amber);
+  background: rgba(8, 12, 18, 0.7);
+  border: 2px solid var(--cs-amber);
+  box-shadow: 0 0 14px rgba(255, 180, 30, 0.25);
+  transition: all 0.15s ease;
+}
+.mm-back:hover { background: rgba(255, 200, 60, 0.16); color: #fff; }

@@ -28,6 +28,13 @@ A 3D car racing game built with [Three.js](https://threejs.org/), the
   (`RaceManager.js`) counts a lap only when you cross the line *and* have gone a
   full ~360° around the loop (no cheating, no hand-placed checkpoints). `R`
   restarts the race.
+- **Main menu (done).** The first screen is a racing-game style **main menu**
+  (`src/game/MainMenu.js`) over a full-screen background (`src/image2.png`):
+  a horizontal icon selector with **RACE / SETTINGS / QUIT** (navigate with the
+  arrows or `A`/`D`, confirm with `Enter`). **Race** opens car select; **Settings**
+  opens a panel with a **Sound Effects** volume slider (persisted to localStorage
+  via `src/game/settings.js` and applied live to the `AudioManager`); **Quit** is
+  inert for now.
 - **Car select (done).** Before the race, a split-screen **CAR SELECT** screen
   (`src/game/CarSelect.js`) lets each player browse the catalog and pick their
   own car — the model spins on a turntable (real 3D, livery-tinted) with its

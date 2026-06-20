@@ -4,6 +4,7 @@ import { CARS } from './game/cars.js';
 import { TRACKS } from './game/tracks.js';
 import { formatTime } from './game/RaceManager.js';
 import { runCarSelect } from './game/CarSelect.js';
+import { runMainMenu } from './game/MainMenu.js';
 
 // Assets live in /public so they are served verbatim (never bundled/transformed).
 const base = import.meta.env.BASE_URL;
@@ -24,6 +25,9 @@ const setProgress = (pct, msg) => {
 };
 
 async function boot() {
+  // 0) MAIN MENU — the very first screen. Resolves when the player picks RACE.
+  await runMainMenu({ root: document.getElementById('main-menu') });
+
   // 1) CAR SELECT — both players choose before anything else loads. The two picks
   //    become Player 1 / Player 2; the remaining cars become the AI bots.
   const picks = await runCarSelect({

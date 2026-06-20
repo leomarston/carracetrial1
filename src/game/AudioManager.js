@@ -7,10 +7,13 @@
  * The AudioContext is created suspended and resumed on the first user gesture
  * (browser autoplay policy).
  */
+import { Settings } from './settings.js';
+
 export class AudioManager {
   constructor(car) {
     this.car = car;
     this.enabled = false;
+    this._baseVolume = 0.6; // scaled by the user's SFX setting
     try {
       const Ctx = window.AudioContext || window.webkitAudioContext;
       this.ctx = new Ctx();
@@ -19,6 +22,11 @@ export class AudioManager {
       return;
     }
     this._build();
+
+    // Apply the SFX volume from settings, and keep it live as the user drags it.
+    this._unsub = Settings.onChange((s) => {
+      if (this.master) this.master.gain.value = this._baseVolume * s.sfxVolume;
+    });
 
     const resume = () => {
       if (this.ctx && this.ctx.state !== 'running') this.ctx.resume();
@@ -39,7 +47,7 @@ export class AudioManager {
   _build() {
     const ctx = this.ctx;
     this.master = ctx.createGain();
-    this.master.gain.value = 0.6;
+    this.master.gain.value = this._baseVolume * Settings.sfxVolume;
     this.master.connect(ctx.destination);
 
     // --- Engine: two detuned sawtooth oscillators + lowpass ---
