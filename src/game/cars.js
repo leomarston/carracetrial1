@@ -51,6 +51,39 @@ export const CARS = {
     // Each wheel is a group node (wheelFL/FR/BL/BR) holding its rim + tyre.
     wheelGroupRe: /^wheel(FL|FR|BL|BR)$/i,
   },
+
+  // --- AI bots (same Sketchfab rig family: real-world metres, nose +Z, "_glows"
+  //     planes hidden, wheel groups wheel(FL/FR/BL/BR)). Scaled to CAR_WIDTH. ---
+  mclaren: {
+    id: 'mclaren', name: 'McLaren Artura', url: 'models/mclaren.glb',
+    targetWidth: CAR_WIDTH, flip: false, mass: 1400,
+    stats: { speed: 10, acceleration: 9, grip: 8, braking: 8, handling: 8 },
+    hideMeshes: /glows/i, wheelGroupRe: /^wheel(FL|FR|BL|BR)$/i,
+  },
+  audi: {
+    id: 'audi', name: 'Audi R8 e-tron', url: 'models/audi.glb',
+    targetWidth: CAR_WIDTH, flip: false, mass: 1600,
+    stats: { speed: 9, acceleration: 9, grip: 8, braking: 8, handling: 7 },
+    hideMeshes: /glows/i, wheelGroupRe: /^wheel(FL|FR|BL|BR)$/i,
+  },
+  dezir: {
+    id: 'dezir', name: 'Renault DeZir', url: 'models/dezir.glb',
+    targetWidth: CAR_WIDTH, flip: false, mass: 1300,
+    stats: { speed: 8, acceleration: 8, grip: 7, braking: 7, handling: 8 },
+    hideMeshes: /glows/i, wheelGroupRe: /^wheel(FL|FR|BL|BR)$/i,
+  },
+  rs01: {
+    id: 'rs01', name: 'Renault Sport R.S. 01', url: 'models/rs01.glb',
+    targetWidth: CAR_WIDTH, flip: false, mass: 1100,
+    stats: { speed: 9, acceleration: 9, grip: 9, braking: 9, handling: 9 },
+    hideMeshes: /glows/i, wheelGroupRe: /^wheel(FL|FR|BL|BR)$/i,
+  },
+  honda: {
+    id: 'honda', name: 'Honda Civic Type R', url: 'models/honda.glb',
+    targetWidth: CAR_WIDTH, flip: false, mass: 1400,
+    stats: { speed: 7, acceleration: 7, grip: 7, braking: 7, handling: 8 },
+    hideMeshes: /glows/i, wheelGroupRe: /^wheel(FL|FR|BL|BR)$/i,
+  },
 };
 
 const lerp = (v, a, b) => a + (b - a) * (Math.max(0, Math.min(10, v)) / 10);

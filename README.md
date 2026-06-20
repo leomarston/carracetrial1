@@ -36,6 +36,13 @@ A 3D car racing game built with [Three.js](https://threejs.org/), the
   half has its own speed/gear/lap/position HUD, a shared minimap (P1 = blue,
   P2 = orange) sits on the divider, and the finish banner shows **PLAYER n WINS**
   when the first driver completes the laps. `R` restarts.
+- **AI bots (done).** Five extra cars (McLaren, Audi, Renault Sport R.S. 01,
+  Renault DeZir, Honda) race the loop as bots. They're driven *kinematically*
+  along the racing line (`AIDriver.js` + `trackPath.js`): each advances by arc
+  length at a curvature-derived speed (slow for corners, fast on straights), so
+  they never spin or get stuck, and they're spread across the lane with slightly
+  varied pace. They count as race entries (positions/laps) and show on the
+  minimap. New bots are just more entries in `src/main.js`'s bot list.
 
 ## Getting started
 
@@ -77,8 +84,9 @@ official Khronos validator with **0 errors**.
 | Asset                  | Contents                                              |
 | ---------------------- | ----------------------------------------------------- |
 | `carracemap1.glb`      | 594 meshes, 62 materials, 61 embedded PNG textures, `KHR_materials_unlit` |
-| `mercedes.glb`         | Player 1 — Mercedes-Benz Silver Lightning, 29 meshes (rigged wheels), 5 materials, `KHR_materials_clearcoat` |
-| `lamborghini.glb`      | Player 2 — actually a Koenigsegg CC850, 25 meshes (rigged wheels), 6 materials, `KHR_materials_clearcoat` |
+| `mercedes.glb`         | Player 1 — Mercedes-Benz Silver Lightning (rigged wheels, `KHR_materials_clearcoat`) |
+| `lamborghini.glb`      | Player 2 — actually a Koenigsegg CC850 (rigged wheels, `KHR_materials_clearcoat`) |
+| `mclaren.glb`, `audi.glb`, `rs01.glb`, `dezir.glb`, `honda.glb` | AI bots (McLaren Artura, Audi R8 e-tron, Renault Sport R.S. 01, Renault DeZir, Honda Civic Type R) — same rig family |
 | `start_finish_line.glb`| the start/finish gantry arch placed across the line |
 
 Neither uses Draco / Meshopt / KTX2 compression, so both load with a plain
@@ -118,6 +126,8 @@ car is ~2.8 m wide, realistic for an F1).
 - **Player 1 car:** "Mercedes-Benz Silver Lightning" (Sketchfab, CC-BY-4.0).
 - **Player 2 car:** "Koenigsegg CC850" by
   [amogusstrikesback2](https://sketchfab.com/amogusstrikesback2).
+- **Bot cars (Sketchfab, CC-BY-4.0):** "McLaren Artura", "Audi R8 e-tron",
+  "Renault Sport R.S. 01", "Renault DeZir", "Honda Civic Type R".
 - **Start/Finish gantry:** "Race drag Start and Finish Line" by
   [rohit143r](https://sketchfab.com/rohit143r).
 

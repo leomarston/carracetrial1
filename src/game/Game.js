@@ -9,6 +9,8 @@ import { Effects } from './Effects.js';
 import { AudioManager } from './AudioManager.js';
 import { RaceManager } from './RaceManager.js';
 import { Minimap } from './Minimap.js';
+import { AIDriver } from './AIDriver.js';
+import { buildCenterline, roadSamplesFromMeshes } from './trackPath.js';
 import { PhysicsWorld, buildTrimeshFromMeshes } from '../physics/PhysicsWorld.js';
 import { buildRoadEdgeWalls } from '../physics/roadWalls.js';
 
@@ -26,6 +28,7 @@ export class Game {
     this.container = container;
     this.timer = new THREE.Timer();
     this.updateables = []; // objects with an update(dt) method
+    this.bots = []; // AI cars: { car, driver, spawn }
     this.physics = new PhysicsWorld({ gravity: -20 });
     this.debugPhysics = false;
 
@@ -178,7 +181,48 @@ export class Game {
     return car;
   }
 
-  /** Reset both cars to their grid slots and restart the race (the `R` key). */
+  /** Build the AI racing line (centerline shifted onto the players' carriageway). */
+  _buildRacingLine(track) {
+    if (this.botWaypoints) return this.botWaypoints;
+    const roads = (this.mapMeshes ?? []).filter((m) => /Road2/i.test(m.name));
+    const samples = roadSamplesFromMeshes(roads);
+    const c = track.loopCenter;
+    const seedRadius = Math.hypot(track.spawn.x - c.x, track.spawn.z - c.z);
+    const seedAngle = Math.atan2(track.spawn.z - c.z, track.spawn.x - c.x);
+    this.botWaypoints = buildCenterline(samples, {
+      center: c, seedRadius, seedAngle,
+      bins: track.path?.bins ?? 240, dir: track.path?.dir ?? -1,
+      gap: track.path?.gap, laneOffset: track.path?.laneOffset,
+    });
+    return this.botWaypoints;
+  }
+
+  /**
+   * Load AI bot cars that drive the racing line kinematically. Spreads them
+   * across the lane (lateral offsets) and varies their pace a touch.
+   * @param {object[]} carConfigs  entries from cars.js (with resolved urls)
+   * @param {object} track
+   */
+  async addBots(carConfigs, track) {
+    const waypoints = this._buildRacingLine(track);
+    const spawns = track.botSpawns ?? [];
+    const lanes = [0, -3.5, 3.5, -6.5, 6.5]; // sideways spread across the lane
+    for (let i = 0; i < carConfigs.length; i++) {
+      const spawn = spawns[i] ?? spawns[spawns.length - 1] ?? track.p2Spawn;
+      const car = new Vehicle(this.physics, { ...carConfigs[i], kinematic: true });
+      await car.load(carConfigs[i].url, spawn);
+      this.scene.add(car.object3D);
+      car.syncVisual(0); // place object3D at the spawn so the driver seeds its index
+      const driver = new AIDriver(car, waypoints, {
+        vmax: car.topSpeed * (0.78 + 0.04 * i), // slight pace variety
+        lateralOffset: lanes[i % lanes.length],
+      });
+      this.bots.push({ car, driver, spawn });
+    }
+    return this.bots;
+  }
+
+  /** Reset all cars to their grid slots and restart the race (the `R` key). */
   _restart() {
     if (this.car && this.p1Spawn) {
       const s = this.p1Spawn;
@@ -188,13 +232,19 @@ export class Game {
       const s = this.p2Spawn;
       this.car2.resetTo(s.x, s.y ?? 0, s.z, s.heading ?? 0);
     }
+    for (const bot of this.bots) {
+      const s = bot.spawn;
+      bot.car.resetTo(s.x, s.y ?? 0, s.z, s.heading ?? 0);
+      bot.driver.reset();
+    }
     if (this.race) this.race.reset();
   }
 
-  /** Set up the race (lap logic) + minimap for a track. Call after both cars. */
+  /** Set up the race (lap logic) + minimap for a track. Call after all cars. */
   setupRace(track, minimapCanvas) {
     const entries = [{ car: this.car, name: this.car.name, isPlayer: true }];
     if (this.car2) entries.push({ car: this.car2, name: this.car2.name, isPlayer: true });
+    for (const bot of this.bots) entries.push({ car: bot.car, name: bot.car.name, isPlayer: false });
     this.race = new RaceManager(track, entries);
     if (minimapCanvas) {
       const roads = (this.mapMeshes ?? []).filter((m) => /Road2/i.test(m.name));
@@ -335,13 +385,20 @@ export class Game {
         this.car2.setInput(holding ? HOLD : read(this.input2));
       }
 
-      // Step the physics with both vehicles inside each fixed step.
+      // Bots are kinematic: once racing they follow the line; held on the grid
+      // during the countdown.
+      if (this.race && this.race.phase !== 'countdown') {
+        for (const bot of this.bots) bot.car.setKinematicPose(bot.driver.update(dt));
+      }
+
+      // Step the physics with the player vehicles inside each fixed step.
       this.physics.step(dt, (h) => {
         this.car.fixedUpdate(h);
         if (this.car2) this.car2.fixedUpdate(h);
       });
       this.car.syncVisual(dt);
       if (this.car2) this.car2.syncVisual(dt);
+      for (const bot of this.bots) bot.car.syncVisual(dt);
       this.effects.update(dt);
       if (this.effects2) this.effects2.update(dt);
       this.audio.update();
@@ -349,7 +406,7 @@ export class Game {
         this.race.update(dt);
         this._updateStartLights(this.race.startLights());
       }
-      if (this.minimap) this.minimap.update(this.car, this.race, this.car2);
+      if (this.minimap) this.minimap.update(this.car, this.race, this.car2, this.bots);
 
       this.chaseCam.update(dt);
       if (this.chaseCam2) this.chaseCam2.update(dt);

@@ -62,7 +62,7 @@ export class Minimap {
     this.roadCanvas = off;
   }
 
-  update(car, race, car2) {
+  update(car, race, car2, bots) {
     const ctx = this.ctx;
     ctx.clearRect(0, 0, this.size, this.size);
     ctx.fillStyle = 'rgba(10, 14, 19, 0.9)'; // dark disc
@@ -76,6 +76,7 @@ export class Minimap {
     ctx.lineWidth = 2.5;
     ctx.beginPath(); ctx.moveTo(sx - 6, sy); ctx.lineTo(sx + 6, sy); ctx.stroke();
 
+    if (bots) for (const bot of bots) this._drawCar(bot.car, '#9aa6b2', '#0a0e13'); // bots = grey
     if (car2) this._drawCar(car2, '#eaf2ff', '#10202e'); // Player 2 = silver
     this._drawCar(car, '#ffb21a', '#3a2400'); // Player 1 = amber (on top)
   }

@@ -17,6 +17,20 @@ export const TRACKS = {
     // x∈[2286,2304], a ~4 m median, right lane x∈[2308,2327]; both start right.
     p2Spawn: { x: 2316, z: 18, y: 0.8, heading: -Math.PI },
 
+    // AI bot grid slots: two columns further back on the right carriageway.
+    botSpawns: [
+      { x: 2311, z: 28, y: 0.8, heading: -Math.PI },
+      { x: 2322, z: 28, y: 0.8, heading: -Math.PI },
+      { x: 2311, z: 39, y: 0.8, heading: -Math.PI },
+      { x: 2322, z: 39, y: 0.8, heading: -Math.PI },
+      { x: 2316, z: 50, y: 0.8, heading: -Math.PI },
+    ],
+
+    // AI racing-line generation (radial centerline around loopCenter), shifted
+    // onto the player's (right) carriageway. dir = -1: driving direction is
+    // decreasing angle around the centre; gap splits the start-straight median.
+    path: { bins: 260, dir: -1, gap: 14, laneOffset: 9 },
+
     // Start/finish line: a plane across the road. forward = travel direction (-Z).
     // A lap is only counted crossing forward AND after a full loop of progress.
     startLine: {
