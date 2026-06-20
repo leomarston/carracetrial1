@@ -1,18 +1,17 @@
 import RAPIER from '@dimforge/rapier3d-compat';
 import { Game } from './game/Game.js';
 import { CARS } from './game/cars.js';
-import { TRACKS } from './game/tracks.js';
+import { MAPS } from './game/maps.js';
 import { formatTime } from './game/RaceManager.js';
 import { runCarSelect } from './game/CarSelect.js';
 import { runMainMenu } from './game/MainMenu.js';
+import { runMapSelect } from './game/MapSelect.js';
 import { preloadCars } from './game/carAssets.js';
 
 // Assets live in /public so they are served verbatim (never bundled/transformed).
 const base = import.meta.env.BASE_URL;
-const MAP_URL = `${base}models/carracemap1.glb`;
 // Browse order on the CAR SELECT screen (all cars are selectable by either player).
 const CAR_ORDER = ['mercedes', 'lambo', 'mclaren', 'audi', 'rs01', 'dezir', 'honda'];
-const TRACK = { ...TRACKS.highway, gantry: { ...TRACKS.highway.gantry, url: `${base}${TRACKS.highway.gantry.url}` } };
 
 const NOS_C = 2 * Math.PI * 42; // nitrous-gauge ring circumference (r=42 in the SVG)
 
@@ -26,12 +25,22 @@ const setProgress = (pct, msg) => {
 };
 
 async function boot() {
-  // 0) MAIN MENU — the very first screen. Resolves when the player picks RACE.
-  await runMainMenu({ root: document.getElementById('main-menu') });
+  // 0) MAIN MENU → MAP SELECT. "Back" on the map screen returns to the menu, so
+  //    this loops until the player actually selects a (playable) map.
+  let chosen;
+  for (;;) {
+    await runMainMenu({ root: document.getElementById('main-menu') });
+    const mapId = await runMapSelect({ root: document.getElementById('map-select'), maps: MAPS });
+    if (mapId === 'back') continue;
+    chosen = MAPS.find((m) => m.id === mapId);
+    break;
+  }
+  const MAP_URL = `${base}${chosen.mapUrl}`;
+  const TRACK = { ...chosen.track, gantry: { ...chosen.track.gantry, url: `${base}${chosen.track.gantry.url}` } };
 
-  // 1) LOADING — after RACE is clicked. Everything heavy loads here: physics,
-  //    ALL car models (into a shared cache), the map and the gantry. This is why
-  //    car select is instant and the race starts immediately after the picks.
+  // 1) LOADING — after the map is chosen. Everything heavy loads here: physics,
+  //    ALL car models (into a shared cache), the chosen map and the gantry. This
+  //    is why car select is instant and the race starts right after the picks.
   overlay.classList.remove('hidden');
   setProgress(3, 'Initialising physics…');
   await RAPIER.init(); // load the Rapier WASM once, before any physics is created

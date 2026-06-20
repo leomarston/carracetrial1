@@ -78,6 +78,62 @@
       </div>
     </div>
 
+    <!-- ===================== MAP SELECT (World Map) =====================
+         Shown after RACE, before car select. Vertical stage list, map preview,
+         and an event-info panel. Driven by MapSelect.js. -->
+    <div id="map-select">
+      <div class="ms-bg"></div>
+
+      <div class="ms-topbar">World Map</div>
+
+      <div class="ms-header">
+        <button class="ms-back-arrow" data-ms-back aria-label="Back">&#8592;</button>
+        <div class="ms-stage" id="ms-stage">Stage 1</div>
+      </div>
+
+      <div class="ms-body">
+        <div class="ms-scroll">
+          <button class="ms-chev" data-ms-nav="-1" aria-label="Up">&#9650;</button>
+          <div class="ms-dots" id="ms-dots"></div>
+          <button class="ms-chev" data-ms-nav="1" aria-label="Down">&#9660;</button>
+        </div>
+
+        <div class="ms-preview" id="ms-preview">
+          <div class="ms-preview-img" id="ms-preview-img"></div>
+          <div class="ms-coming">COMING SOON</div>
+        </div>
+
+        <div class="ms-info">
+          <div class="ms-row">
+            <div class="ms-row-lbl">Event Status</div>
+            <div class="ms-row-val" id="ms-status">Open</div>
+          </div>
+          <div class="ms-row">
+            <div class="ms-row-lbl">Race Type:</div>
+            <div class="ms-row-val" id="ms-type">Circuit</div>
+          </div>
+          <div class="ms-row">
+            <div class="ms-row-lbl">Distance:</div>
+            <div class="ms-row-val" id="ms-dist">4.1 km</div>
+          </div>
+          <div class="ms-row">
+            <div class="ms-row-lbl">Best Lap:</div>
+            <div class="ms-row-val" id="ms-best">&mdash;</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ms-cash" id="ms-cash">14,105</div>
+
+      <div class="ms-actionbar">
+        <button class="ms-btn" data-ms-select>Select Event</button>
+        <button class="ms-btn" data-ms-back>Back</button>
+        <button class="ms-btn" data-ms-quit>Quit Game</button>
+      </div>
+
+      <div class="ms-toast" id="ms-toast">COMING SOON</div>
+    </div>
+
     <!-- ===================== CAR SELECT (pre-race, split-screen) =====================
          Top half = Player 1, bottom half = Player 2. The 3D cars render onto
          #cs-canvas; the panels below are the racing UI. Driven by CarSelect.js. -->

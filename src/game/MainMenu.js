@@ -13,8 +13,11 @@ import { Settings } from './settings.js';
  * @returns {Promise<'race'>}
  */
 export function runMainMenu({ root }) {
-  return new Promise((resolve) => new MainMenu(root, resolve).show());
+  if (!instance) instance = new MainMenu(root);
+  return instance.open();
 }
+
+let instance;
 
 const OPTIONS = [
   { id: 'race', label: 'RACE' },
@@ -23,44 +26,52 @@ const OPTIONS = [
 ];
 
 class MainMenu {
-  constructor(root, resolve) {
+  constructor(root) {
     this.root = root;
-    this.resolve = resolve;
     this.index = 0;
     this.mode = 'menu'; // 'menu' | 'settings'
+    this.active = false;
+    this.resolve = null;
     this.nodes = [...root.querySelectorAll('.mm-node')];
     this.labelEl = root.querySelector('#mm-sel-label');
     this.slider = root.querySelector('#mm-sfx');
     this.sfxVal = root.querySelector('#mm-sfx-val');
+    this._bind(); // listeners are attached once; gated by this.active
   }
 
-  show() {
-    this._bind();
+  // Show the menu (re-runnable; resolves with 'race' when the player starts).
+  open() {
+    this.active = true;
+    this.index = 0;
+    this.mode = 'menu';
+    this.root.style.display = '';
+    this.root.classList.remove('hidden', 'mm-settings-open');
     this._render();
     this.slider.value = Math.round(Settings.sfxVolume * 100);
     this._renderSfx();
+    return new Promise((resolve) => { this.resolve = resolve; });
   }
 
   _bind() {
-    this._onKey = (e) => this._key(e);
-    window.addEventListener('keydown', this._onKey, true);
+    window.addEventListener('keydown', (e) => this._key(e), true);
 
     this.nodes.forEach((n, i) => {
-      n.addEventListener('mouseenter', () => { if (this.mode === 'menu') { this.index = i; this._render(); } });
-      n.addEventListener('click', () => { this.index = i; this._render(); this._confirm(); });
+      n.addEventListener('mouseenter', () => { if (this.active && this.mode === 'menu') { this.index = i; this._render(); } });
+      n.addEventListener('click', () => { if (this.active) { this.index = i; this._render(); this._confirm(); } });
     });
     this.root.querySelectorAll('[data-mm-arrow]').forEach((el) => {
-      el.addEventListener('click', () => this.mode === 'menu' && this._move(+el.dataset.mmArrow));
+      el.addEventListener('click', () => { if (this.active && this.mode === 'menu') this._move(+el.dataset.mmArrow); });
     });
 
     this.slider.addEventListener('input', () => {
       Settings.setSfxVolume(this.slider.value / 100);
       this._renderSfx();
     });
-    this.root.querySelector('#mm-settings-back').addEventListener('click', () => this._closeSettings());
+    this.root.querySelector('#mm-settings-back').addEventListener('click', () => { if (this.active) this._closeSettings(); });
   }
 
   _key(e) {
+    if (!this.active) return;
     if (this.mode === 'settings') {
       if (['Escape', 'Backspace', 'Enter', 'NumpadEnter'].includes(e.code)) { e.preventDefault(); this._closeSettings(); }
       else if (e.code === 'ArrowLeft' || e.code === 'KeyA') { e.preventDefault(); this._nudgeSfx(-5); }
@@ -115,8 +126,9 @@ class MainMenu {
   }
 
   _start() {
-    window.removeEventListener('keydown', this._onKey, true);
+    this.active = false;
     this.root.classList.add('hidden');
-    setTimeout(() => { this.root.style.display = 'none'; this.resolve('race'); }, 450);
+    const r = this.resolve; this.resolve = null;
+    setTimeout(() => { this.root.style.display = 'none'; r && r('race'); }, 450);
   }
 }

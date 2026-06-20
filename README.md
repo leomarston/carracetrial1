@@ -35,6 +35,13 @@ A 3D car racing game built with [Three.js](https://threejs.org/), the
   opens a panel with a **Sound Effects** volume slider (persisted to localStorage
   via `src/game/settings.js` and applied live to the `AudioManager`); **Quit** is
   inert for now.
+- **Map select (done).** After **Race**, a **World Map** screen
+  (`src/game/MapSelect.js` + `src/game/maps.js`) lists the stages: a vertical
+  selector, a map preview and an event-info panel (Event Status / Race Type /
+  Distance / Best Lap). Today there's one playable map; the rest are scrollable
+  but show **COMING SOON** and can't be selected. **Back** returns to the menu;
+  selecting the playable map continues to loading → car select. New maps are just
+  entries in `maps.js`.
 - **Car select (done).** Before the race, a split-screen **CAR SELECT** screen
   (`src/game/CarSelect.js`) lets each player browse the catalog and pick their
   own car — the model spins on a turntable (real 3D, livery-tinted) with its

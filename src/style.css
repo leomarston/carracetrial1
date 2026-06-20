@@ -995,3 +995,306 @@ body {
   transition: all 0.15s ease;
 }
 .mm-back:hover { background: rgba(255, 200, 60, 0.16); color: #fff; }
+
+/* ============================================================================
+   MAP SELECT (World Map). Stage list on the left, map preview centre, event
+   info on the right, gold hazard action bar at the bottom.
+   ========================================================================== */
+#map-select {
+  position: fixed;
+  inset: 0;
+  z-index: 260;
+  overflow: hidden;
+  display: none; /* shown by MapSelect.open() */
+  transition: opacity 0.4s ease;
+  font-family: var(--cs-text);
+  color: #eef2f0;
+}
+#map-select.hidden { opacity: 0; pointer-events: none; }
+
+/* Dark scene with a warm hazard glow at the edges, echoing the reference. */
+.ms-bg {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(120% 80% at 50% 36%, rgba(20, 30, 30, 0.2) 0%, rgba(6, 9, 10, 0.92) 70%),
+    linear-gradient(180deg, #0c1212 0%, #0a0f10 58%, #1c1407 100%),
+    repeating-linear-gradient(115deg, rgba(200, 140, 20, 0.05) 0 22px, rgba(0, 0, 0, 0) 22px 60px);
+}
+
+.ms-topbar {
+  position: absolute;
+  top: clamp(12px, 2.4vh, 24px);
+  left: clamp(16px, 3vw, 40px);
+  font-family: var(--cs-display);
+  font-weight: 800;
+  font-style: italic;
+  font-size: clamp(1.2rem, 2.6vw, 1.9rem);
+  letter-spacing: 0.04em;
+  color: #e9d35a;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
+}
+
+/* ---- header bar: back arrow + stage name ---- */
+.ms-header {
+  position: absolute;
+  top: clamp(46px, 8vh, 70px);
+  left: clamp(16px, 4vw, 56px);
+  right: clamp(16px, 4vw, 56px);
+  height: clamp(36px, 6vh, 52px);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 10px;
+  background: linear-gradient(180deg, rgba(18, 22, 20, 0.82), rgba(10, 13, 12, 0.82));
+  border: 2px solid rgba(220, 196, 86, 0.55);
+  border-radius: 999px;
+  box-shadow: 0 0 18px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(0, 0, 0, 0.4);
+}
+.ms-back-arrow {
+  flex: 0 0 auto;
+  width: clamp(28px, 4vh, 38px);
+  height: clamp(28px, 4vh, 38px);
+  border-radius: 50%;
+  cursor: pointer;
+  background: rgba(8, 11, 10, 0.8);
+  border: 2px solid rgba(220, 196, 86, 0.6);
+  color: #e9d35a;
+  font-size: clamp(0.9rem, 1.8vh, 1.2rem);
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.12s ease, background 0.12s ease;
+}
+.ms-back-arrow:hover { transform: scale(1.1); background: rgba(220, 196, 86, 0.2); }
+.ms-stage {
+  flex: 1 1 auto;
+  text-align: center;
+  font-family: var(--cs-display);
+  font-weight: 700;
+  font-style: italic;
+  font-size: clamp(1.1rem, 2.4vw, 1.7rem);
+  letter-spacing: 0.05em;
+  color: #f0e58a;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+}
+
+/* ---- body: scroll list · preview · info ---- */
+.ms-body {
+  position: absolute;
+  left: clamp(16px, 4vw, 56px);
+  right: clamp(16px, 4vw, 56px);
+  top: clamp(96px, 16vh, 134px);
+  bottom: clamp(70px, 13vh, 104px);
+  display: flex;
+  align-items: stretch;
+  gap: clamp(12px, 2vw, 28px);
+}
+
+/* vertical stage selector */
+.ms-scroll {
+  flex: 0 0 auto;
+  width: clamp(34px, 4vw, 52px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  background: linear-gradient(180deg, rgba(18, 22, 20, 0.8), rgba(10, 13, 12, 0.8));
+  border: 1px solid rgba(220, 196, 86, 0.35);
+  border-radius: 999px;
+}
+.ms-chev {
+  flex: 0 0 auto;
+  width: clamp(26px, 3vw, 36px);
+  height: clamp(26px, 3vw, 36px);
+  border-radius: 50%;
+  cursor: pointer;
+  background: rgba(8, 11, 10, 0.7);
+  border: 1px solid rgba(220, 196, 86, 0.5);
+  color: #d9c34a;
+  font-size: 0.7rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.12s ease, color 0.12s ease;
+}
+.ms-chev:hover { transform: scale(1.12); color: #fff; }
+.ms-dots {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(10px, 2vh, 20px);
+}
+.ms-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  cursor: pointer;
+  background: rgba(220, 230, 228, 0.55);
+  border: 1px solid rgba(0, 0, 0, 0.4);
+  padding: 0;
+  transition: all 0.14s ease;
+}
+.ms-dot.locked { background: rgba(150, 165, 163, 0.4); }
+.ms-dot.is-sel {
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  background: linear-gradient(180deg, #2a2f2c, #141816);
+  border: 2px solid #e9d35a;
+  box-shadow: 0 0 12px rgba(220, 196, 86, 0.5);
+}
+
+/* map preview */
+.ms-preview {
+  position: relative;
+  flex: 1 1 auto;
+  border-radius: 6px;
+  overflow: hidden;
+  background:
+    radial-gradient(120% 120% at 30% 20%, #1b3b3a 0%, #102a2c 55%, #0b1f22 100%);
+  border: 1px solid rgba(220, 196, 86, 0.25);
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.6);
+}
+.ms-preview-img { position: absolute; inset: 0; }
+.ms-preview-img svg { width: 100%; height: 100%; display: block; }
+.ms-preview.is-locked .ms-preview-img { filter: grayscale(0.5) brightness(0.6); }
+.ms-coming {
+  position: absolute;
+  left: 50%; top: 50%;
+  transform: translate(-50%, -50%) rotate(-8deg);
+  font-family: var(--cs-display);
+  font-weight: 800;
+  font-style: italic;
+  font-size: clamp(1.6rem, 4vw, 3rem);
+  letter-spacing: 0.08em;
+  color: #ffd23c;
+  text-shadow: 0 0 18px rgba(0, 0, 0, 0.8), 0 4px 12px rgba(0, 0, 0, 0.7);
+  opacity: 0;
+  pointer-events: none;
+}
+.ms-preview.is-locked .ms-coming { opacity: 1; }
+
+/* event info panel */
+.ms-info {
+  flex: 0 0 clamp(180px, 26vw, 320px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: clamp(8px, 1.8vh, 18px);
+}
+.ms-row-lbl {
+  font-family: var(--cs-text);
+  font-weight: 700;
+  font-size: clamp(0.82rem, 1.5vw, 1.05rem);
+  color: #dfe6e3;
+  margin-bottom: 5px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+}
+.ms-row-val {
+  font-family: var(--cs-display);
+  font-weight: 700;
+  font-style: italic;
+  font-size: clamp(0.95rem, 1.9vw, 1.3rem);
+  color: #cfe9c3;
+  padding: clamp(5px, 1vh, 9px) 14px;
+  background: linear-gradient(180deg, rgba(46, 52, 48, 0.92), rgba(28, 32, 30, 0.92));
+  border-radius: 7px;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.4);
+}
+.ms-row-val.ok { color: #9be24e; }
+.ms-row-val.soon { color: #ffce3a; }
+
+.ms-cash {
+  position: absolute;
+  left: clamp(16px, 4vw, 56px);
+  bottom: clamp(74px, 13.5vh, 110px);
+  font-family: var(--cs-display);
+  font-weight: 700;
+  font-size: clamp(0.95rem, 1.8vw, 1.25rem);
+  color: #f0e58a;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+}
+
+/* ---- bottom hazard action bar ---- */
+.ms-actionbar {
+  position: absolute;
+  left: 0; right: 0;
+  bottom: 0;
+  height: clamp(44px, 8vh, 62px);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: clamp(8px, 1.5vw, 18px);
+  padding: 0 clamp(16px, 3vw, 40px);
+  background:
+    linear-gradient(180deg, #f0b526 0%, #d8941a 100%);
+  border-top: 2px solid rgba(0, 0, 0, 0.5);
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.4);
+}
+/* hazard stripes on the left of the bar */
+.ms-actionbar::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 40%;
+  background: repeating-linear-gradient(115deg, rgba(0, 0, 0, 0.55) 0 16px, rgba(0, 0, 0, 0) 16px 40px);
+  pointer-events: none;
+}
+.ms-btn {
+  position: relative;
+  cursor: pointer;
+  font-family: var(--cs-display);
+  font-weight: 800;
+  font-style: italic;
+  font-size: clamp(0.78rem, 1.5vw, 1.05rem);
+  letter-spacing: 0.04em;
+  color: #f5ead0;
+  padding: clamp(6px, 1.3vh, 11px) clamp(12px, 1.8vw, 22px);
+  background: linear-gradient(180deg, rgba(28, 24, 14, 0.92), rgba(16, 13, 7, 0.92));
+  border: 1px solid rgba(0, 0, 0, 0.55);
+  box-shadow: inset 0 0 0 1px rgba(255, 220, 130, 0.18);
+  transition: transform 0.12s ease, color 0.12s ease, background 0.12s ease;
+}
+.ms-btn:hover { color: #fff; background: linear-gradient(180deg, rgba(50, 42, 20, 0.95), rgba(30, 24, 12, 0.95)); }
+.ms-btn[data-ms-select] { color: #ffe27a; }
+.ms-btn.is-disabled { opacity: 0.55; }
+
+.ms-deny { animation: ms-deny 0.34s ease; }
+@keyframes ms-deny {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+/* "Coming soon" toast when a locked stage is selected. */
+.ms-toast {
+  position: absolute;
+  left: 50%; top: 22%;
+  transform: translate(-50%, -10px);
+  z-index: 5;
+  font-family: var(--cs-display);
+  font-weight: 800;
+  font-style: italic;
+  font-size: clamp(1.3rem, 3vw, 2.2rem);
+  letter-spacing: 0.06em;
+  color: #ffce3a;
+  background: rgba(8, 11, 10, 0.86);
+  border: 2px solid rgba(255, 206, 58, 0.6);
+  border-radius: 8px;
+  padding: 8px 22px;
+  opacity: 0;
+  pointer-events: none;
+  text-shadow: 0 0 14px rgba(255, 180, 30, 0.5);
+}
+.ms-toast.show { animation: ms-toast 1.5s ease forwards; }
+@keyframes ms-toast {
+  0% { opacity: 0; transform: translate(-50%, -10px); }
+  14% { opacity: 1; transform: translate(-50%, 0); }
+  80% { opacity: 1; transform: translate(-50%, 0); }
+  100% { opacity: 0; transform: translate(-50%, -10px); }
+}
