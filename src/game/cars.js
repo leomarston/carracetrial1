@@ -10,12 +10,17 @@
  *   braking      – stopping power
  *   handling     – steering response & stability (higher = more planted)
  */
+
+// Every car is scaled to this fixed body width (metres) so they're all the same
+// size on track as the F1 — the car's length/height then follow its own model.
+export const CAR_WIDTH = 2.77;
+
 export const CARS = {
   f1: {
     id: 'f1',
     name: 'Scuderia F1',
     url: 'models/f1car.glb',
-    targetWidth: 2.77,
+    targetWidth: CAR_WIDTH,
     flip: true,
     mass: 800,
     stats: { speed: 10, acceleration: 9, grip: 3, braking: 9, handling: 3 },
@@ -24,19 +29,20 @@ export const CARS = {
     brakeLights: [{ mat: 'glossyorange' }, { mat: 'BackLight', maxVerts: 100 }],
   },
 
-  // The AI opponent. The asset (lamborghini.glb) is actually a Koenigsegg CC850
+  // Player 2's car. The asset (lamborghini.glb) is actually a Koenigsegg CC850
   // by amogusstrikesback2 (CC-BY-4.0). It's already in real-world metres and its
   // nose points +Z, so no flip; the emissive "_glows" billboard planes (one juts
-  // ~1.9 m past the nose) are hidden so they don't float or skew sizing.
+  // ~1.9 m past the nose) are hidden so they don't float or skew sizing. Scaled to
+  // the same fixed width as the F1.
   lambo: {
     id: 'lambo',
     name: 'Koenigsegg CC850',
     url: 'models/lamborghini.glb',
-    targetWidth: 2.5,
+    targetWidth: CAR_WIDTH,
     flip: false,
     mass: 1200,
-    // Grippy and planted (a Koenigsegg): the AI can carry corner speed cleanly.
-    // The player's F1 is faster on top end but twitchy — a fair, beatable race.
+    // Grippy and planted (a Koenigsegg): carries corner speed cleanly. The F1 is
+    // faster on top end but twitchier — a fair head-to-head.
     stats: { speed: 9, acceleration: 8, grip: 8, braking: 8, handling: 8 },
     hideMeshes: /glows/i,
     // Each wheel is a group node (wheelFL/FR/BL/BR) holding its rim + tyre.
