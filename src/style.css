@@ -764,21 +764,6 @@ body {
     linear-gradient(0deg, rgba(2, 4, 8, 0.9) 0%, rgba(2, 4, 8, 0.45) 26%, rgba(2, 4, 8, 0) 52%);
 }
 
-/* "main menu" graffiti heading, sat above-right of the selector. */
-.mm-heading {
-  position: absolute;
-  right: clamp(6%, 12vw, 16%);
-  top: 54%;
-  font-family: "Permanent Marker", var(--cs-display);
-  font-weight: 400;
-  font-size: clamp(2rem, 5.5vw, 4.4rem);
-  line-height: 1;
-  color: #f3f6fa;
-  transform: rotate(-5deg);
-  text-shadow: 0 3px 0 rgba(0, 0, 0, 0.45), 0 0 24px rgba(0, 0, 0, 0.6);
-  pointer-events: none;
-}
-
 /* Horizontal icon selector. */
 .mm-selector {
   position: absolute;
