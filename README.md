@@ -114,6 +114,10 @@ car is ~2.8 m wide, realistic for an F1).
 - **Import & sizing**: each car model is scaled to a fixed body width
   (`CAR_WIDTH`, ~2.8 m) and recentred so the chassis origin is its centre, with
   decorative emissive "glow" planes hidden so they don't float or skew sizing.
+- **Livery tint**: these models ship a white/grayscale paint texture (just baked
+  shading) so they'd render white; each car's `paintColor` multiplies its
+  `carpaint` meshes to give it a colour while keeping the shading (chrome, glass,
+  black trim and calipers are left untouched).
 - **Start line**: spawns centred in a lane under the **"CRESCENT CITY NORTH"
   gantry** (mesh `Finish_Strut001`), facing the map's longest straight.
 - **Chase camera** (`src/game/ChaseCamera.js`): close, with a **fixed follow

@@ -26,6 +26,7 @@ export const CARS = {
     targetWidth: CAR_WIDTH,
     flip: false,
     mass: 950,
+    paintColor: 0xc9ced2, // silver
     // Fast and eager, a touch looser than the Koenigsegg.
     stats: { speed: 10, acceleration: 9, grip: 6, braking: 8, handling: 6 },
     hideMeshes: /glows/i,
@@ -44,6 +45,7 @@ export const CARS = {
     targetWidth: CAR_WIDTH * 1.15, // a little bigger than Player 1's car
     flip: false,
     mass: 1200,
+    paintColor: 0x189e74, // emerald
     // Grippy and planted (a Koenigsegg): carries corner speed cleanly. The
     // Mercedes is faster on top end but twitchier — a fair head-to-head.
     stats: { speed: 9, acceleration: 8, grip: 8, braking: 8, handling: 8 },
@@ -56,31 +58,31 @@ export const CARS = {
   //     planes hidden, wheel groups wheel(FL/FR/BL/BR)). Scaled to CAR_WIDTH. ---
   mclaren: {
     id: 'mclaren', name: 'McLaren Artura', url: 'models/mclaren.glb',
-    targetWidth: CAR_WIDTH, flip: false, mass: 1400,
+    targetWidth: CAR_WIDTH, flip: false, mass: 1400, paintColor: 0xff5a00, // papaya orange
     stats: { speed: 10, acceleration: 9, grip: 8, braking: 8, handling: 8 },
     hideMeshes: /glows/i, wheelGroupRe: /^wheel(FL|FR|BL|BR)$/i,
   },
   audi: {
     id: 'audi', name: 'Audi R8 e-tron', url: 'models/audi.glb',
-    targetWidth: CAR_WIDTH, flip: false, mass: 1600,
+    targetWidth: CAR_WIDTH, flip: false, mass: 1600, paintColor: 0x1846a0, // blue
     stats: { speed: 9, acceleration: 9, grip: 8, braking: 8, handling: 7 },
     hideMeshes: /glows/i, wheelGroupRe: /^wheel(FL|FR|BL|BR)$/i,
   },
   dezir: {
     id: 'dezir', name: 'Renault DeZir', url: 'models/dezir.glb',
-    targetWidth: CAR_WIDTH, flip: false, mass: 1300,
+    targetWidth: CAR_WIDTH, flip: false, mass: 1300, paintColor: 0xc01526, // red
     stats: { speed: 8, acceleration: 8, grip: 7, braking: 7, handling: 8 },
     hideMeshes: /glows/i, wheelGroupRe: /^wheel(FL|FR|BL|BR)$/i,
   },
   rs01: {
     id: 'rs01', name: 'Renault Sport R.S. 01', url: 'models/rs01.glb',
-    targetWidth: CAR_WIDTH, flip: false, mass: 1100,
+    targetWidth: CAR_WIDTH, flip: false, mass: 1100, paintColor: 0xf4c20a, // yellow
     stats: { speed: 9, acceleration: 9, grip: 9, braking: 9, handling: 9 },
     hideMeshes: /glows/i, wheelGroupRe: /^wheel(FL|FR|BL|BR)$/i,
   },
   honda: {
     id: 'honda', name: 'Honda Civic Type R', url: 'models/honda.glb',
-    targetWidth: CAR_WIDTH, flip: false, mass: 1400,
+    targetWidth: CAR_WIDTH, flip: false, mass: 1400, paintColor: 0xe9ecee, // championship white
     stats: { speed: 7, acceleration: 7, grip: 7, braking: 7, handling: 8 },
     hideMeshes: /glows/i, wheelGroupRe: /^wheel(FL|FR|BL|BR)$/i,
   },

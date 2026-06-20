@@ -117,10 +117,32 @@ export class Vehicle {
     this.object3D.add(model);
     this.model = model;
 
+    this._applyPaint();
     this._setupWheelsAndLights();
     this._createChassis(spawn);
     if (!this.kinematic) this._addWheels();
     return this;
+  }
+
+  /**
+   * Tint the bodywork. These models ship a white/grayscale paint texture (just
+   * baked shading) with a white base colour, so the car renders white/grey; we
+   * multiply the "carpaint" meshes by the car's colour to give it its livery
+   * while keeping the shading. Chrome/glass/black-trim/calipers are left alone.
+   */
+  _applyPaint() {
+    const hex = this.config.paintColor;
+    if (hex == null) return;
+    const re = this.config.paintMeshRe || /carpaint/i;
+    const skip = /black|decal|caliper/i;
+    const color = new THREE.Color(hex);
+    this.model.traverse((o) => {
+      if (!o.isMesh || Array.isArray(o.material)) return;
+      if (!re.test(o.name) || skip.test(o.name)) return;
+      const m = o.material.clone();
+      m.color = color.clone();
+      o.material = m;
+    });
   }
 
   /** Find the 4 wheels (to spin/steer) and the brake-light materials. */
