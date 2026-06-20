@@ -57,6 +57,8 @@ async function boot() {
 
   const p1 = hudCells('p1-hud');
   const p2 = hudCells('p2-hud');
+  const ww1 = document.getElementById('p1-wrongway');
+  const ww2 = document.getElementById('p2-wrongway');
   const banner = document.getElementById('finish-banner');
   const cdEl = document.getElementById('countdown');
   let lastCd = '';
@@ -77,6 +79,11 @@ async function boot() {
     if (r) {
       setPlayer(p1, r.entries[0], r);
       if (r.entries[1]) setPlayer(p2, r.entries[1], r);
+
+      // Wrong-way warnings (only while racing).
+      const racing = r.phase === 'racing';
+      ww1.classList.toggle('hidden', !(racing && game.car && game.car.wrongWay));
+      ww2.classList.toggle('hidden', !(racing && game.car2 && game.car2.wrongWay));
 
       // Countdown overlay (re-trigger the pop animation each time it changes).
       const t = r.countdownText;

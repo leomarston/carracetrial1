@@ -207,6 +207,37 @@ body {
 #p2-hud .rhud-info  { top: calc(50% + 12px); right: 18px; }
 #p2-hud .rhud-speed { bottom: 12px; right: 18px; }
 
+/* ---- Wrong-way warning (one per player half) ---- */
+.wrongway {
+  position: fixed;
+  left: 50%;
+  z-index: 18;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  font-family: var(--hud-font);
+  font-weight: 800;
+  font-size: clamp(1.6rem, 4.2vw, 3rem);
+  letter-spacing: 0.06em;
+  color: #ff2e2e;
+  text-shadow: 0 0 14px rgba(255, 0, 0, 0.6), 0 3px 8px rgba(0, 0, 0, 0.7);
+  animation: ww-flash 0.55s steps(1, end) infinite;
+}
+
+.wrongway span {
+  display: inline-block;
+  transform: skewX(-11deg);
+  border-top: 3px solid #ff2e2e;
+  border-bottom: 3px solid #ff2e2e;
+  padding: 2px 16px;
+}
+
+.wrongway.hidden { display: none; }
+#p1-wrongway { top: 26%; }
+#p2-wrongway { top: 76%; }
+
+@keyframes ww-flash { 0%, 50% { opacity: 1; } 50.01%, 100% { opacity: 0.18; } }
+
 /* ---- Split-screen divider ---- */
 #divider {
   position: fixed;

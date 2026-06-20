@@ -10,7 +10,7 @@ import { AudioManager } from './AudioManager.js';
 import { RaceManager } from './RaceManager.js';
 import { Minimap } from './Minimap.js';
 import { AIDriver } from './AIDriver.js';
-import { buildCenterline, roadSamplesFromMeshes } from './trackPath.js';
+import { buildCenterline, roadSamplesFromMeshes, nearestIndex } from './trackPath.js';
 import { PhysicsWorld, buildTrimeshFromMeshes } from '../physics/PhysicsWorld.js';
 import { buildRoadEdgeWalls } from '../physics/roadWalls.js';
 
@@ -31,6 +31,7 @@ export class Game {
     this.bots = []; // AI cars: { car, driver, spawn }
     this.physics = new PhysicsWorld({ gravity: -20 });
     this.debugPhysics = false;
+    this._tmpUp = new THREE.Vector3();
 
     this._initRenderer();
     this._initScene();
@@ -141,6 +142,7 @@ export class Game {
 
     this.car = car;
     this.p1Spawn = spawn;
+    this.rec1 = freshRecovery(spawn);
     this.input = new Controls(P1_KEYS);
     this.chaseCam = new ChaseCamera(this.camera, car);
     this.effects = new Effects(this.scene, car);
@@ -175,26 +177,104 @@ export class Game {
 
     this.car2 = car;
     this.p2Spawn = spawn;
+    this.rec2 = freshRecovery(spawn);
     this.input2 = new Controls(P2_KEYS);
     this.chaseCam2 = new ChaseCamera(this.camera2, car);
     this.effects2 = new Effects(this.scene, car);
     return car;
   }
 
+  /** Dense road-surface samples (cached) — reused for the racing line & on-road test. */
+  _getRoadSamples() {
+    if (!this._roadSamples) {
+      const roads = (this.mapMeshes ?? []).filter((m) => /Road2/i.test(m.name));
+      this._roadSamples = roadSamplesFromMeshes(roads);
+    }
+    return this._roadSamples;
+  }
+
   /** Build the AI racing line (centerline shifted onto the players' carriageway). */
   _buildRacingLine(track) {
     if (this.botWaypoints) return this.botWaypoints;
-    const roads = (this.mapMeshes ?? []).filter((m) => /Road2/i.test(m.name));
-    const samples = roadSamplesFromMeshes(roads);
     const c = track.loopCenter;
     const seedRadius = Math.hypot(track.spawn.x - c.x, track.spawn.z - c.z);
     const seedAngle = Math.atan2(track.spawn.z - c.z, track.spawn.x - c.x);
-    this.botWaypoints = buildCenterline(samples, {
+    this.botWaypoints = buildCenterline(this._getRoadSamples(), {
       center: c, seedRadius, seedAngle,
       bins: track.path?.bins ?? 240, dir: track.path?.dir ?? -1,
       gap: track.path?.gap, laneOffset: track.path?.laneOffset,
     });
     return this.botWaypoints;
+  }
+
+  /** Spatial hash of road samples, for a reliable (winding-proof) on-road test. */
+  _buildRoadGrid() {
+    const cell = 8;
+    const grid = new Map();
+    for (const p of this._getRoadSamples()) {
+      const k = Math.floor(p.x / cell) + ',' + Math.floor(p.z / cell);
+      let arr = grid.get(k); if (!arr) grid.set(k, arr = []); arr.push(p);
+    }
+    this._roadGrid = { cell, grid };
+  }
+
+  /** Is (x,z) on the road? (within ~5 m of a road sample). */
+  _onRoad(x, z) {
+    if (!this._roadGrid) return true;
+    const { cell, grid } = this._roadGrid;
+    const cx = Math.floor(x / cell), cz = Math.floor(z / cell);
+    for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) {
+      const arr = grid.get((cx + dx) + ',' + (cz + dz)); if (!arr) continue;
+      for (const p of arr) { const ex = p.x - x, ez = p.z - z; if (ex * ex + ez * ez <= 25) return true; }
+    }
+    return false;
+  }
+
+  /**
+   * Driving assists for a human player: respawn the car at its last good spot if
+   * it flips or drives off the road, and flag when it's heading the wrong way.
+   */
+  _updateAssists(car, rec, dt) {
+    const p = car.object3D.position;
+    const up = this._tmpUp.set(0, 1, 0).applyQuaternion(car.object3D.quaternion);
+    const upright = up.y > 0.4;
+    const onRoad = this._onRoad(p.x, p.z);
+    const speed = Math.abs(car.speed);
+
+    // Remember the last upright, on-road spot we were actually driving through.
+    if (upright && onRoad) {
+      rec.recordT += dt;
+      if (rec.recordT > 0.3 && speed > 3) {
+        rec.recordT = 0;
+        rec.lastGood = { x: p.x, y: p.y - car.size.y / 2, z: p.z, heading: car.heading };
+      }
+    }
+
+    // Flipped or off-road for too long → drop back onto the last good spot.
+    rec.flipT = upright ? 0 : rec.flipT + dt;
+    rec.offT = onRoad ? 0 : rec.offT + dt;
+    if ((rec.flipT > 1.2 || rec.offT > 1.6) && rec.lastGood) {
+      const g = rec.lastGood;
+      car.resetTo(g.x, g.y, g.z, g.heading);
+      car.syncVisual(0);
+      rec.flipT = 0; rec.offT = 0; rec.recordT = 0;
+    }
+
+    // Wrong way: travelling against the racing-line tangent (covers both turning
+    // around and reversing back down the track).
+    let wrong = false;
+    if (this.botWaypoints && speed > 2.5) {
+      const wps = this.botWaypoints, n = wps.length;
+      const i = nearestIndex(wps, p.x, p.z);
+      const a = wps[i], b = wps[(i + 1) % n];
+      const tx = b.x - a.x, tz = b.z - a.z;
+      const tl = Math.hypot(tx, tz) || 1;
+      const fdot = (Math.sin(car.heading) * tx + Math.cos(car.heading) * tz) / tl;
+      const travelDot = Math.sign(car.speed) * fdot; // flip when reversing
+      wrong = travelDot < -0.3;
+    }
+    rec.wrongT = wrong ? rec.wrongT + dt : 0;
+    car.wrongWay = rec.wrongT > 0.4;
   }
 
   /**
@@ -227,10 +307,12 @@ export class Game {
     if (this.car && this.p1Spawn) {
       const s = this.p1Spawn;
       this.car.resetTo(s.x, s.y ?? 0, s.z, s.heading ?? 0);
+      this.rec1 = freshRecovery(s);
     }
     if (this.car2 && this.p2Spawn) {
       const s = this.p2Spawn;
       this.car2.resetTo(s.x, s.y ?? 0, s.z, s.heading ?? 0);
+      this.rec2 = freshRecovery(s);
     }
     for (const bot of this.bots) {
       const s = bot.spawn;
@@ -242,6 +324,8 @@ export class Game {
 
   /** Set up the race (lap logic) + minimap for a track. Call after all cars. */
   setupRace(track, minimapCanvas) {
+    this._buildRacingLine(track); // also used for wrong-way detection
+    this._buildRoadGrid(); // for the off-road check
     const entries = [{ car: this.car, name: this.car.name, isPlayer: true }];
     if (this.car2) entries.push({ car: this.car2, name: this.car2.name, isPlayer: true });
     for (const bot of this.bots) entries.push({ car: bot.car, name: bot.car.name, isPlayer: false });
@@ -399,6 +483,13 @@ export class Game {
       this.car.syncVisual(dt);
       if (this.car2) this.car2.syncVisual(dt);
       for (const bot of this.bots) bot.car.syncVisual(dt);
+
+      // Driving assists for the human players (flip/off-road respawn, wrong-way).
+      if (this.race && this.race.phase === 'racing') {
+        if (this.rec1) this._updateAssists(this.car, this.rec1, dt);
+        if (this.car2 && this.rec2) this._updateAssists(this.car2, this.rec2, dt);
+      }
+
       this.effects.update(dt);
       if (this.effects2) this.effects2.update(dt);
       this.audio.update();
@@ -447,4 +538,12 @@ export class Game {
     this.renderer.setSize(w, h);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   }
+}
+
+/** Per-player recovery state (last-good checkpoint + flip/off-road/wrong-way timers). */
+function freshRecovery(spawn) {
+  return {
+    lastGood: { x: spawn.x, y: spawn.y ?? 0, z: spawn.z, heading: spawn.heading ?? 0 },
+    flipT: 0, offT: 0, recordT: 0, wrongT: 0,
+  };
 }

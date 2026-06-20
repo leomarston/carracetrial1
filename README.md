@@ -36,6 +36,12 @@ A 3D car racing game built with [Three.js](https://threejs.org/), the
   half has its own speed/gear/lap/position HUD, a shared minimap (P1 = blue,
   P2 = orange) sits on the divider, and the finish banner shows **PLAYER n WINS**
   when the first driver completes the laps. `R` restarts.
+- **Driving assists (done).** Each human car keeps a rolling "last-good" checkpoint
+  (last upright, on-road spot it was driving through); if it **flips** or drives
+  **off the road** for a moment it's dropped back there, upright. A flashing,
+  NFS-style **WRONG WAY** warning shows in a player's half whenever they travel
+  against the track direction (turned around or reversing). On-road is tested
+  against the road sample-cloud (winding-proof), not raycasts.
 - **AI bots (done).** Five extra cars (McLaren, Audi, Renault Sport R.S. 01,
   Renault DeZir, Honda) race the loop as bots. They're driven *kinematically*
   along the racing line (`AIDriver.js` + `trackPath.js`): each advances by arc
