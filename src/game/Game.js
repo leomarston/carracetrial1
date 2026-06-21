@@ -260,6 +260,43 @@ export class Game {
     const onRoad = this._onRoad(p.x, p.z);
     const speed = Math.abs(car.speed);
 
+    // --- Wrong way: travelling against the track direction (turning around or
+    //     reversing). Prefer the AI racing-line tangent; otherwise use the tangent
+    //     around the loop centre, in the lap direction. ---
+    let wrong = false;
+    if (this.botWaypoints && speed > 2.5) {
+      const wps = this.botWaypoints, n = wps.length;
+      const i = nearestIndex(wps, p.x, p.z);
+      const a = wps[i], b = wps[(i + 1) % n];
+      const tx = b.x - a.x, tz = b.z - a.z;
+      const tl = Math.hypot(tx, tz) || 1;
+      const fdot = (Math.sin(car.heading) * tx + Math.cos(car.heading) * tz) / tl;
+      wrong = Math.sign(car.speed) * fdot < -0.3; // negative when reversing
+    } else if (this.loopCenter && this.lapDir && speed > 2.5) {
+      const rx = p.x - this.loopCenter.x, rz = p.z - this.loopCenter.z;
+      const rl = Math.hypot(rx, rz) || 1;
+      const ex = this.lapDir * -rz / rl, ez = this.lapDir * rx / rl; // expected travel tangent
+      const fdot = Math.sin(car.heading) * ex + Math.cos(car.heading) * ez;
+      wrong = Math.sign(car.speed) * fdot < -0.3;
+    }
+    rec.wrongT = wrong ? rec.wrongT + dt : 0;
+    car.wrongWay = rec.wrongT > 0.4;
+
+    // Going the wrong way is a deliberate move — just flash the warning, never
+    // respawn for it. Pause the off-road/stuck recovery while it's shown (a real
+    // flip still recovers, since you can't drive upside-down).
+    if (car.wrongWay) {
+      rec.offT = 0; rec.stuckT = 0; rec.recordT = 0;
+      rec.flipT = upright ? 0 : rec.flipT + dt;
+      if (rec.flipT > 1.2 && rec.lastGood) {
+        const g = rec.lastGood;
+        car.resetTo(g.x, g.y, g.z, g.heading);
+        car.syncVisual(0);
+        rec.flipT = 0;
+      }
+      return;
+    }
+
     // Remember the last upright, on-road spot we were actually driving through.
     if (upright && onRoad) {
       rec.recordT += dt;
@@ -282,30 +319,6 @@ export class Game {
       car.syncVisual(0);
       rec.flipT = 0; rec.offT = 0; rec.recordT = 0; rec.stuckT = 0;
     }
-
-    // Wrong way: travelling against the track direction (covers turning around and
-    // reversing). Prefer the AI racing-line tangent; otherwise use the tangent
-    // around the loop centre, in the lap direction.
-    let wrong = false;
-    if (this.botWaypoints && speed > 2.5) {
-      const wps = this.botWaypoints, n = wps.length;
-      const i = nearestIndex(wps, p.x, p.z);
-      const a = wps[i], b = wps[(i + 1) % n];
-      const tx = b.x - a.x, tz = b.z - a.z;
-      const tl = Math.hypot(tx, tz) || 1;
-      const fdot = (Math.sin(car.heading) * tx + Math.cos(car.heading) * tz) / tl;
-      const travelDot = Math.sign(car.speed) * fdot; // flip when reversing
-      wrong = travelDot < -0.3;
-    } else if (this.loopCenter && this.lapDir && speed > 2.5) {
-      const rx = p.x - this.loopCenter.x, rz = p.z - this.loopCenter.z;
-      const rl = Math.hypot(rx, rz) || 1;
-      const ex = this.lapDir * -rz / rl, ez = this.lapDir * rx / rl; // expected travel tangent
-      const fdot = Math.sin(car.heading) * ex + Math.cos(car.heading) * ez;
-      const travelDot = Math.sign(car.speed) * fdot;
-      wrong = travelDot < -0.3;
-    }
-    rec.wrongT = wrong ? rec.wrongT + dt : 0;
-    car.wrongWay = rec.wrongT > 0.4;
   }
 
   /**
