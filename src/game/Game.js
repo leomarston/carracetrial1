@@ -313,7 +313,7 @@ export class Game {
     // Flipped, off-road or stuck for too long → drop back onto the last good spot.
     rec.flipT = upright ? 0 : rec.flipT + dt;
     rec.offT = onRoad ? 0 : rec.offT + dt;
-    if ((rec.flipT > 1.2 || rec.offT > 1.6 || rec.stuckT > 4) && rec.lastGood) {
+    if ((rec.flipT > 1.2 || rec.offT > (this.offRoadDelay ?? 5) || rec.stuckT > 4) && rec.lastGood) {
       const g = rec.lastGood;
       car.resetTo(g.x, g.y, g.z, g.heading);
       car.syncVisual(0);
@@ -375,6 +375,7 @@ export class Game {
     // direction is the tangent around the loop centre, in the lap direction
     // (derived from the spawn heading vs that tangent).
     this.loopCenter = track.loopCenter;
+    this.offRoadDelay = track.offRoadDelay ?? 5; // seconds off-road before a respawn
     if (track.loopCenter && track.spawn) {
       const c = track.loopCenter, s = track.spawn;
       const tcx = -(s.z - c.z), tcz = (s.x - c.x); // CCW tangent at the spawn
