@@ -55,16 +55,15 @@ export const TRACKS = {
   },
 
   // ---- Map 2: a closed road circuit. Its road surface is baked across two
-  //      ribbon meshes (C20-14 / C20-15) rather than named "Road" meshes, and
-  //      the asphalt is part of the terrain (no clean edge geometry), so we keep
-  //      players on track with the off-road respawn assist instead of walls.
-  //      No AI bots on this map (no `path` / `botSpawns`). ----
+  //      ribbon meshes (C20-14 / C20-15) rather than named "Road" meshes. We
+  //      build invisible barriers along the road edges (from those ribbon meshes)
+  //      so players can't drive off the track. No AI bots on this map. ----
   hyperdrive: {
     id: 'hyperdrive',
     name: 'Hyperdrive Circuit',
     laps: 2,
     roadRe: /C20-1[45]_/, // the drivable road-ribbon meshes in this asset
-    walls: false, // road baked onto terrain → use the off-road respawn assist
+    walls: true, // invisible barriers along the road edges (keep players on track)
 
     // Start/finish straight runs along world X at z≈1099 (road band y≈1). Both
     // cars start just behind the line, on the same band, facing -X (the lap dir).
