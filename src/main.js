@@ -54,6 +54,7 @@ async function boot() {
   const game = new Game(document.getElementById('app'));
   game.roadRe = TRACK.roadRe || /Road2/i; // which meshes are road (minimap/on-road/walls)
   game.buildWalls = TRACK.walls !== false; // some maps bake the road onto the terrain
+  game.mapScale = TRACK.scale || 1; // scale tiny maps up so cars are proportioned
   await game.loadMap(MAP_URL, (pct, loaded, total) => {
     setProgress(30 + pct * 0.5, total > 0 // 30 → 80 %
       ? `Loading map… ${(loaded / 1e6).toFixed(1)} / ${(total / 1e6).toFixed(1)} MB`

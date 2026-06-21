@@ -90,4 +90,30 @@ export const TRACKS = {
     // Road extent (world XZ) for the minimap framing.
     roadBounds: { minX: 185, maxX: 1263, minZ: 426, maxZ: 1170 },
   },
+
+  // ---- Map 3: a snowy Moscow street scene. Authored at ~1/18 scale, so we scale
+  //      it up. The drivable ground ("dibiao") is an open plaza bounded by baked
+  //      barriers/buildings (no road-edge walls needed). No AI bots. ----
+  moscow: {
+    id: 'moscow',
+    name: 'Moscow Streets',
+    laps: 2,
+    scale: 18, // tiny asset → scaled up so the cars are proportioned
+    roadRe: /dibiao/i, // drivable ground tiles (for the minimap)
+    walls: false, // barriers + buildings are baked colliders (natural walls)
+    offRoad: false, // open, uneven city → keep only the flip respawn (no off-road resets)
+
+    // Start on a verified-flat plaza, both cars facing +X into the street network.
+    spawn: { x: -65, z: 12, y: 1.5, heading: Math.PI / 2 },
+    p2Spawn: { x: -65, z: 18, y: 1.5, heading: Math.PI / 2 },
+
+    startLine: { x: -52, z: 15, nx: 1, nz: 0, halfWidth: 16 },
+    gantry: { url: 'models/start_finish_line.glb', x: -52, z: 15, rotationY: 0, span: 26 },
+
+    // Loop centre inside the street network, for angular lap-progress validation.
+    loopCenter: { x: -25, z: -25 },
+
+    // Frame the minimap on the drivable street network (not the whole terrain).
+    roadBounds: { minX: -100, maxX: 70, minZ: -100, maxZ: 100 },
+  },
 };

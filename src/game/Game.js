@@ -39,6 +39,7 @@ export class Game {
     // off for maps whose road is baked onto the terrain (no clean edge geometry).
     this.roadRe = /Road2/i;
     this.buildWalls = true;
+    this.mapScale = 1; // some maps are authored tiny and need scaling up
 
     this._initRenderer();
     this._initScene();
@@ -114,6 +115,15 @@ export class Game {
     const { root, stats } = await loadMap(url, onProgress);
     this.map = root;
     this.mapStats = stats;
+
+    // Some maps are authored at a tiny scale; scale the whole map up so the cars
+    // (a fixed ~2.8 m) are correctly proportioned. Recompute bounds afterwards.
+    if (this.mapScale && this.mapScale !== 1) {
+      root.scale.setScalar(this.mapScale);
+      root.updateMatrixWorld(true);
+      const box = new THREE.Box3().setFromObject(root);
+      stats.bounds = { box, size: box.getSize(new THREE.Vector3()), center: box.getCenter(new THREE.Vector3()) };
+    }
     this.scene.add(root);
 
     // Cache the map's meshes, then bake them into one static physics collider
@@ -334,7 +344,7 @@ export class Game {
   /** Set up the race (lap logic) + minimap for a track. Call after all cars. */
   setupRace(track, minimapCanvas) {
     if (track.path) this._buildRacingLine(track); // AI line + wrong-way (skipped on no-AI maps)
-    this._buildRoadGrid(); // for the off-road check
+    if (track.offRoad !== false) this._buildRoadGrid(); // off-road respawn (skip on open maps)
     const entries = [{ car: this.car, name: this.car.name, isPlayer: true }];
     if (this.car2) entries.push({ car: this.car2, name: this.car2.name, isPlayer: true });
     for (const bot of this.bots) entries.push({ car: bot.car, name: bot.car.name, isPlayer: false });
