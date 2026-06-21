@@ -116,6 +116,10 @@ charge — it drains while boosting and refills otherwise.
 | `R`  | Restart the race (resets both cars) |
 | `P`  | Toggle physics-collider debug view  |
 
+Each player also has an on-screen **↻ RESET** button in their HUD corner (P1
+top-left, P2 bottom-left): tap it when stuck to respawn just your car at the
+last good spot, without restarting the race or affecting the other player.
+
 ### Other commands
 
 ```bash

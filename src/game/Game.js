@@ -368,6 +368,21 @@ export class Game {
     if (this.race) this.race.reset();
   }
 
+  /**
+   * Respawn one player's car at its last good spot (the on-screen "reset" button
+   * + a manual rescue for getting stuck). which = 1 or 2.
+   */
+  respawnCar(which) {
+    const car = which === 2 ? this.car2 : this.car;
+    const rec = which === 2 ? this.rec2 : this.rec1;
+    if (!car) return;
+    const g = (rec && rec.lastGood) || (which === 2 ? this.p2Spawn : this.p1Spawn);
+    if (!g) return;
+    car.resetTo(g.x, g.y ?? 0, g.z, g.heading ?? 0);
+    car.syncVisual(0);
+    if (rec) { rec.flipT = 0; rec.offT = 0; rec.stuckT = 0; rec.recordT = 0; }
+  }
+
   /** Set up the race (lap logic) + minimap for a track. Call after all cars. */
   setupRace(track, minimapCanvas) {
     if (track.path) this._buildRacingLine(track); // AI line + wrong-way (skipped on no-AI maps)

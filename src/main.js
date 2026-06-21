@@ -103,6 +103,15 @@ async function boot() {
   const p2 = hudCells('p2-hud');
   const ww1 = document.getElementById('p1-wrongway');
   const ww2 = document.getElementById('p2-wrongway');
+
+  // Manual respawn buttons (rescue when stuck). Blur after click so the button
+  // doesn't keep keyboard focus (Space/Enter would otherwise re-trigger it).
+  const wireReset = (id, which) => {
+    const btn = document.getElementById(id);
+    btn.addEventListener('click', (e) => { e.preventDefault(); game.respawnCar(which); btn.blur(); });
+  };
+  wireReset('p1-reset', 1);
+  wireReset('p2-reset', 2);
   const banner = document.getElementById('finish-banner');
   const cdEl = document.getElementById('countdown');
   let lastCd = '';

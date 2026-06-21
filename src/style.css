@@ -249,6 +249,30 @@ body {
 #p2-hud .rhud-info  { top: calc(50% + 12px); right: 18px; }
 #p2-hud .rhud-speed { bottom: 12px; right: 18px; }
 
+/* Manual "reset" button (rescue when stuck) — top-left of each player's half. */
+.rhud-reset {
+  position: fixed;
+  z-index: 16;
+  pointer-events: auto;
+  cursor: pointer;
+  font-family: var(--hud-font);
+  font-weight: 800;
+  font-size: 0.92rem;
+  letter-spacing: 0.08em;
+  color: #2a1500;
+  background: linear-gradient(180deg, #ffd75a, var(--hud-amber-dk));
+  border: none;
+  padding: 5px 12px;
+  transform: skewX(-11deg);
+  box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.45);
+  opacity: 0.9;
+  transition: opacity 0.12s ease, transform 0.12s ease;
+}
+.rhud-reset:hover { opacity: 1; transform: skewX(-11deg) scale(1.06); }
+.rhud-reset:active { transform: skewX(-11deg) scale(0.97); }
+#p1-reset { top: 12px; left: 18px; }
+#p2-reset { bottom: 12px; left: 18px; } /* bottom-left, clear of the centred minimap */
+
 /* ---- Wrong-way warning (one per player half) ---- */
 .wrongway {
   position: fixed;
