@@ -45,20 +45,8 @@ const HIGHWAY_PREVIEW = `
 
 export const MAPS = [
   {
-    id: 'highway',
-    stage: 'Stage 1',
-    name: 'Highway Battle',
-    available: true,
-    mapUrl: 'models/carracemap1.glb',
-    track: TRACKS.highway,
-    raceType: 'Circuit',
-    distance: '4.1 km',
-    bestLap: '—',
-    preview: HIGHWAY_PREVIEW,
-  },
-  {
     id: 'hyperdrive',
-    stage: 'Stage 2',
+    stage: 'Stage 1',
     name: 'Hyperdrive Circuit',
     available: true,
     mapUrl: 'models/carracemap2.glb',
@@ -67,6 +55,18 @@ export const MAPS = [
     distance: '3.5 km',
     bestLap: '—',
     preview: HYPERDRIVE_PREVIEW,
+  },
+  {
+    id: 'highway',
+    stage: 'Stage 2',
+    name: 'Highway Battle',
+    available: true,
+    mapUrl: 'models/carracemap1.glb',
+    track: TRACKS.highway,
+    raceType: 'Circuit',
+    distance: '4.1 km',
+    bestLap: '—',
+    preview: HIGHWAY_PREVIEW,
   },
   {
     id: 'coast',
