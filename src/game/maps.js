@@ -9,6 +9,25 @@ import { TRACKS } from './tracks.js';
  * map-select UI; playable maps also carry `mapUrl` + `track` (from tracks.js).
  */
 
+// Stylised top-down sketch of the Hyperdrive circuit (own art — drawn, not the asset).
+const HYPERDRIVE_PREVIEW = `
+<svg viewBox="0 0 420 320" preserveAspectRatio="xMidYMid meet">
+  <g fill="none" stroke="#d2ecea" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round" opacity="0.92">
+    <path d="M 80 212
+      C 52 236 70 272 106 263
+      C 137 255 152 271 188 268
+      C 228 265 252 286 302 282
+      C 348 278 376 248 362 210
+      C 351 178 312 182 306 150
+      C 299 115 332 95 313 69
+      C 292 42 248 59 254 96
+      C 259 126 227 131 209 153
+      C 187 180 150 166 119 176
+      C 90 185 100 193 80 212 Z"/>
+  </g>
+  <circle cx="245" cy="284" r="5" fill="#ffce3a" opacity="0.95"/>
+</svg>`;
+
 // Stylised top-down sketch of the highway loop (own art — drawn, not the asset).
 const HIGHWAY_PREVIEW = `
 <svg viewBox="0 0 420 320" preserveAspectRatio="xMidYMid meet">
@@ -38,13 +57,16 @@ export const MAPS = [
     preview: HIGHWAY_PREVIEW,
   },
   {
-    id: 'downtown',
+    id: 'hyperdrive',
     stage: 'Stage 2',
-    name: 'Downtown Loop',
-    available: false,
-    raceType: 'Sprint',
-    distance: '—',
+    name: 'Hyperdrive Circuit',
+    available: true,
+    mapUrl: 'models/carracemap2.glb',
+    track: TRACKS.hyperdrive,
+    raceType: 'Circuit',
+    distance: '3.5 km',
     bestLap: '—',
+    preview: HYPERDRIVE_PREVIEW,
   },
   {
     id: 'coast',

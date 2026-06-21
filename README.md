@@ -38,10 +38,15 @@ A 3D car racing game built with [Three.js](https://threejs.org/), the
 - **Map select (done).** After **Race**, a **World Map** screen
   (`src/game/MapSelect.js` + `src/game/maps.js`) lists the stages: a vertical
   selector, a map preview and an event-info panel (Event Status / Race Type /
-  Distance / Best Lap). Today there's one playable map; the rest are scrollable
-  but show **COMING SOON** and can't be selected. **Back** returns to the menu;
-  selecting the playable map continues to loading → car select. New maps are just
-  entries in `maps.js`.
+  Distance / Best Lap). **Stage 1 — Highway Battle** and **Stage 2 — Hyperdrive
+  Circuit** are playable; remaining stages are scrollable but show **COMING
+  SOON**. **Back** returns to the menu; selecting a map continues to loading →
+  car select. New maps are just entries in `maps.js` + `tracks.js`.
+- **Per-track road config (done).** Each track names its road meshes
+  (`roadRe`) and can disable road-edge walls (`walls: false`) for maps whose
+  asphalt is baked onto the terrain (no clean edge geometry) — those keep players
+  on track with the off-road respawn assist instead. Maps without a `path`/
+  `botSpawns` simply run with no AI bots (e.g. the Hyperdrive circuit).
 - **Car select (done).** Before the race, a split-screen **CAR SELECT** screen
   (`src/game/CarSelect.js`) lets each player browse the catalog and pick their
   own car — the model spins on a turntable (real 3D, livery-tinted) with its

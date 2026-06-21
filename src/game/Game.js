@@ -34,6 +34,12 @@ export class Game {
     this.debugPhysics = false;
     this._tmpUp = new THREE.Vector3();
 
+    // Which map meshes count as "road" (per-track; set before loadMap). Drives the
+    // road-edge walls, the on-road test and the minimap. buildWalls can be turned
+    // off for maps whose road is baked onto the terrain (no clean edge geometry).
+    this.roadRe = /Road2/i;
+    this.buildWalls = true;
+
     this._initRenderer();
     this._initScene();
     this._initCamera();
@@ -118,12 +124,14 @@ export class Game {
     this.physics.addStaticTrimesh(vertices, indices);
 
     // Invisible barriers along the road edges so the car stays on the track.
-    const roadMeshes = this.mapMeshes.filter((m) => /Road2/i.test(m.name));
-    const walls = buildRoadEdgeWalls(roadMeshes, { weld: 0.3, height: 2.5 });
-    if (walls.indices.length) {
-      this.physics.addStaticTrimesh(walls.vertices, walls.indices);
-      this.roadWallFaces = walls.faces;
-      this.roadWallGeom = walls;
+    if (this.buildWalls) {
+      const roadMeshes = this.mapMeshes.filter((m) => this.roadRe.test(m.name));
+      const walls = buildRoadEdgeWalls(roadMeshes, { weld: 0.3, height: 2.5 });
+      if (walls.indices.length) {
+        this.physics.addStaticTrimesh(walls.vertices, walls.indices);
+        this.roadWallFaces = walls.faces;
+        this.roadWallGeom = walls;
+      }
     }
 
     this._frameCameraTo(stats.bounds);
@@ -188,7 +196,7 @@ export class Game {
   /** Dense road-surface samples (cached) — reused for the racing line & on-road test. */
   _getRoadSamples() {
     if (!this._roadSamples) {
-      const roads = (this.mapMeshes ?? []).filter((m) => /Road2/i.test(m.name));
+      const roads = (this.mapMeshes ?? []).filter((m) => this.roadRe.test(m.name));
       this._roadSamples = roadSamplesFromMeshes(roads);
     }
     return this._roadSamples;
@@ -325,14 +333,14 @@ export class Game {
 
   /** Set up the race (lap logic) + minimap for a track. Call after all cars. */
   setupRace(track, minimapCanvas) {
-    this._buildRacingLine(track); // also used for wrong-way detection
+    if (track.path) this._buildRacingLine(track); // AI line + wrong-way (skipped on no-AI maps)
     this._buildRoadGrid(); // for the off-road check
     const entries = [{ car: this.car, name: this.car.name, isPlayer: true }];
     if (this.car2) entries.push({ car: this.car2, name: this.car2.name, isPlayer: true });
     for (const bot of this.bots) entries.push({ car: bot.car, name: bot.car.name, isPlayer: false });
     this.race = new RaceManager(track, entries);
     if (minimapCanvas) {
-      const roads = (this.mapMeshes ?? []).filter((m) => /Road2/i.test(m.name));
+      const roads = (this.mapMeshes ?? []).filter((m) => this.roadRe.test(m.name));
       this.minimap = new Minimap(minimapCanvas, roads, track);
     }
     return this.race;

@@ -52,6 +52,8 @@ async function boot() {
   );
 
   const game = new Game(document.getElementById('app'));
+  game.roadRe = TRACK.roadRe || /Road2/i; // which meshes are road (minimap/on-road/walls)
+  game.buildWalls = TRACK.walls !== false; // some maps bake the road onto the terrain
   await game.loadMap(MAP_URL, (pct, loaded, total) => {
     setProgress(30 + pct * 0.5, total > 0 // 30 → 80 %
       ? `Loading map… ${(loaded / 1e6).toFixed(1)} / ${(total / 1e6).toFixed(1)} MB`
@@ -60,7 +62,7 @@ async function boot() {
 
   setProgress(84, 'Placing start/finish line…');
   await game.addStartFinishGantry(TRACK.gantry);
-  game._buildRacingLine(TRACK); // cache the AI line now (used by bots + wrong-way)
+  if (TRACK.path) game._buildRacingLine(TRACK); // AI line (only on maps with bots)
   setProgress(90, 'Choose your car…');
 
   // 2) CAR SELECT — instant, since every model is already cached. The loading
@@ -80,10 +82,13 @@ async function boot() {
   await game.addCar(withUrl(picks.p1), TRACK.spawn);
   await game.addPlayer2(withUrl(picks.p2), TRACK.p2Spawn);
   setProgress(97);
-  await game.addBots(
-    CAR_ORDER.filter((id) => id !== picks.p1 && id !== picks.p2).slice(0, 5).map(withUrl),
-    TRACK,
-  );
+  // AI bots only on maps that define a racing line + bot grid.
+  if (TRACK.path && TRACK.botSpawns) {
+    await game.addBots(
+      CAR_ORDER.filter((id) => id !== picks.p1 && id !== picks.p2).slice(0, 5).map(withUrl),
+      TRACK,
+    );
+  }
   game.setupRace(TRACK, document.getElementById('minimap'));
   game.start();
 

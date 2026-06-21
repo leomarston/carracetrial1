@@ -53,4 +53,41 @@ export const TRACKS = {
     // Road extent (world XZ) for the minimap framing.
     roadBounds: { minX: -1571, maxX: 2327, minZ: -3253, maxZ: 2580 },
   },
+
+  // ---- Map 2: a closed road circuit. Its road surface is baked across two
+  //      ribbon meshes (C20-14 / C20-15) rather than named "Road" meshes, and
+  //      the asphalt is part of the terrain (no clean edge geometry), so we keep
+  //      players on track with the off-road respawn assist instead of walls.
+  //      No AI bots on this map (no `path` / `botSpawns`). ----
+  hyperdrive: {
+    id: 'hyperdrive',
+    name: 'Hyperdrive Circuit',
+    laps: 2,
+    roadRe: /C20-1[45]_/, // the drivable road-ribbon meshes in this asset
+    walls: false, // road baked onto terrain → use the off-road respawn assist
+
+    // Start/finish straight runs along world X at z≈1099 (road band y≈1). Both
+    // cars start just behind the line, on the same band, facing -X (the lap dir).
+    spawn: { x: 778, z: 1096, y: 1.5, heading: -Math.PI / 2 },
+    p2Spawn: { x: 788, z: 1102, y: 1.5, heading: -Math.PI / 2 },
+
+    startLine: {
+      x: 760, z: 1099, // a point on the line, mid start-straight
+      nx: -1, nz: 0, // forward normal = travel direction (-X)
+      halfWidth: 20, // covers the road width across Z
+    },
+
+    gantry: {
+      url: 'models/start_finish_line.glb',
+      x: 760, z: 1099,
+      rotationY: 0, // span runs across the road (world Z) for this travel axis
+      span: 36,
+    },
+
+    // Loop centre (the enclosed infield), for angular lap-progress validation.
+    loopCenter: { x: 724, z: 798 },
+
+    // Road extent (world XZ) for the minimap framing.
+    roadBounds: { minX: 185, maxX: 1263, minZ: 426, maxZ: 1170 },
+  },
 };
