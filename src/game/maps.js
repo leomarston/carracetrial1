@@ -28,25 +28,6 @@ const HYPERDRIVE_PREVIEW = `
   <circle cx="245" cy="284" r="5" fill="#ffce3a" opacity="0.95"/>
 </svg>`;
 
-// Stylised top-down sketch of the Moscow street scene (own art — drawn, not the asset).
-const MOSCOW_PREVIEW = `
-<svg viewBox="0 0 420 320" preserveAspectRatio="xMidYMid meet">
-  <g fill="none" stroke="#cfe0ea" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" opacity="0.9">
-    <path d="M70 180 C 60 130 110 96 160 104 C 210 112 226 96 270 104
-             C 320 112 360 140 352 186 C 345 226 300 236 262 230
-             C 214 222 196 250 150 244 C 104 238 80 226 70 180 Z"/>
-  </g>
-  <g fill="#b9cdd8" opacity="0.55">
-    <rect x="150" y="150" width="34" height="34" rx="3"/>
-    <rect x="200" y="140" width="40" height="44" rx="3"/>
-    <rect x="252" y="156" width="30" height="30" rx="3"/>
-  </g>
-  <g fill="none" stroke="#9fdcff" stroke-width="2" opacity="0.5">
-    <path d="M120 250 L120 280 M300 250 L300 282 M210 250 L210 286"/>
-  </g>
-  <circle cx="156" cy="230" r="5" fill="#ffce3a" opacity="0.95"/>
-</svg>`;
-
 // Stylised top-down sketch of the highway loop (own art — drawn, not the asset).
 const HIGHWAY_PREVIEW = `
 <svg viewBox="0 0 420 320" preserveAspectRatio="xMidYMid meet">
@@ -88,15 +69,12 @@ export const MAPS = [
     preview: HYPERDRIVE_PREVIEW,
   },
   {
-    id: 'moscow',
+    id: 'coast',
     stage: 'Stage 3',
-    name: 'Moscow Streets',
-    available: true,
-    mapUrl: 'models/carracemap3.glb',
-    track: TRACKS.moscow,
-    raceType: 'Street',
-    distance: '2.6 km',
+    name: 'Coastal Run',
+    available: false,
+    raceType: 'Circuit',
+    distance: '—',
     bestLap: '—',
-    preview: MOSCOW_PREVIEW,
   },
 ];

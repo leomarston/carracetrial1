@@ -38,17 +38,15 @@ A 3D car racing game built with [Three.js](https://threejs.org/), the
 - **Map select (done).** After **Race**, a **World Map** screen
   (`src/game/MapSelect.js` + `src/game/maps.js`) lists the stages: a vertical
   selector, a map preview and an event-info panel (Event Status / Race Type /
-  Distance / Best Lap). **Stage 1 — Highway Battle**, **Stage 2 — Hyperdrive
-  Circuit** and **Stage 3 — Moscow Streets** are playable; remaining stages are
-  scrollable but show **COMING SOON**. **Back** returns to the menu; selecting a
-  map continues to loading → car select. New maps are just entries in `maps.js` +
-  `tracks.js`.
+  Distance / Best Lap). **Stage 1 — Highway Battle** and **Stage 2 — Hyperdrive
+  Circuit** are playable; remaining stages are scrollable but show **COMING
+  SOON**. **Back** returns to the menu; selecting a map continues to loading →
+  car select. New maps are just entries in `maps.js` + `tracks.js`.
 - **Per-track config (done).** Each track names its road meshes (`roadRe`) and
   can: disable road-edge walls (`walls: false`) for maps whose asphalt is baked
-  onto the terrain; scale a tiny asset up (`scale`) so the cars are proportioned
-  (e.g. Moscow is authored ~1/18 scale); and disable the off-road respawn
-  (`offRoad: false`) for open, uneven maps. Maps without a `path`/`botSpawns`
-  run with no AI bots (Hyperdrive + Moscow).
+  onto the terrain; scale a tiny asset up (`scale`) so the cars are proportioned;
+  and disable the off-road respawn (`offRoad: false`) for open, uneven maps. Maps
+  without a `path`/`botSpawns` run with no AI bots (e.g. the Hyperdrive circuit).
 - **Car select (done).** Before the race, a split-screen **CAR SELECT** screen
   (`src/game/CarSelect.js`) lets each player browse the catalog and pick their
   own car — the model spins on a turntable (real 3D, livery-tinted) with its

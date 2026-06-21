@@ -90,30 +90,4 @@ export const TRACKS = {
     // Road extent (world XZ) for the minimap framing.
     roadBounds: { minX: 185, maxX: 1263, minZ: 426, maxZ: 1170 },
   },
-
-  // ---- Map 3: a snowy Moscow street scene. Authored at ~1/18 scale, so we scale
-  //      it up. The drivable ground ("dibiao") is an open plaza bounded by baked
-  //      barriers/buildings (no road-edge walls needed). No AI bots. ----
-  moscow: {
-    id: 'moscow',
-    name: 'Moscow Streets',
-    laps: 2,
-    scale: 18, // tiny asset → scaled up so the cars are proportioned
-    roadRe: /lujian/i, // the actual marked road through the city (路面), not the plaza
-    walls: false, // barriers + buildings are baked colliders (natural walls)
-    offRoad: false, // open, uneven city → keep only the flip respawn (no off-road resets)
-
-    // Start on the road's N–S straight (a lujian segment), facing -Z up the circuit.
-    spawn: { x: 45, z: -3, y: 1.5, heading: Math.PI },
-    p2Spawn: { x: 51, z: -3, y: 1.5, heading: Math.PI },
-
-    startLine: { x: 48, z: -16, nx: 0, nz: -1, halfWidth: 14 },
-    gantry: { url: 'models/start_finish_line.glb', x: 48, z: -16, rotationY: Math.PI / 2, span: 22 },
-
-    // Loop centre inside the circuit, for angular lap-progress validation.
-    loopCenter: { x: 9, z: 0 },
-
-    // Frame the minimap on the road circuit (lujian extent, world units).
-    roadBounds: { minX: -106, maxX: 122, minZ: -100, maxZ: 100 },
-  },
 };
