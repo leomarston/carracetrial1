@@ -105,6 +105,11 @@ both players are ready.
 | Steer left      | `A`                | `←`                           |
 | Steer right     | `D`                | `→`                           |
 | Handbrake       | `Space`            | `Right-Shift` / `Right-Ctrl`  |
+| Nitro / boost   | `Left-Shift`       | `Numpad-0` / `/`              |
+
+Each car is speed-limited to its top speed; holding **nitro** (while you have
+charge) raises that limit and adds punch. The green HUD ring is the nitrous
+charge — it drains while boosting and refills otherwise.
 
 | Key  | Action                              |
 | ---- | ----------------------------------- |

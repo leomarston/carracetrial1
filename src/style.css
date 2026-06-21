@@ -212,8 +212,11 @@ body {
   stroke-linecap: round;
   transform: rotate(-90deg);
   transform-origin: 50% 50%;
-  transition: stroke-dashoffset 0.08s linear;
+  transition: stroke-dashoffset 0.08s linear, stroke 0.1s linear;
 }
+/* While the nitrous is firing, the ring flips to a hot cyan and pulses. */
+.nos-fill.boosting { stroke: #45e9ff; filter: drop-shadow(0 0 5px rgba(70, 220, 255, 0.95)); animation: nos-boost 0.32s ease-in-out infinite; }
+@keyframes nos-boost { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 .nos-bottle { fill: var(--hud-green); opacity: 0.92; }
 
 .rhud-read {

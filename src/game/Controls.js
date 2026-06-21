@@ -10,7 +10,7 @@ export class Controls {
   constructor(map) {
     this.map = map;
     this.codes = new Set();
-    const all = new Set([...map.up, ...map.down, ...map.left, ...map.right, ...map.handbrake]);
+    const all = new Set([...map.up, ...map.down, ...map.left, ...map.right, ...map.handbrake, ...(map.boost ?? [])]);
     this._onDown = (e) => { if (all.has(e.code)) { e.preventDefault(); this.codes.add(e.code); } };
     this._onUp = (e) => this.codes.delete(e.code);
     window.addEventListener('keydown', this._onDown);
@@ -23,15 +23,17 @@ export class Controls {
   get throttle() { return (this._any(this.map.up) ? 1 : 0) + (this._any(this.map.down) ? -1 : 0); }
   get steer() { return (this._any(this.map.left) ? 1 : 0) + (this._any(this.map.right) ? -1 : 0); }
   get handbrake() { return this._any(this.map.handbrake); }
+  get boost() { return this._any(this.map.boost ?? []); }
 }
 
-/** Player 1: WASD + Space. */
+/** Player 1: WASD + Space (handbrake) + Left-Shift (nitro). */
 export const P1_KEYS = {
-  up: ['KeyW'], down: ['KeyS'], left: ['KeyA'], right: ['KeyD'], handbrake: ['Space'],
+  up: ['KeyW'], down: ['KeyS'], left: ['KeyA'], right: ['KeyD'],
+  handbrake: ['Space'], boost: ['ShiftLeft'],
 };
 
-/** Player 2: arrow keys + Right-Shift / Right-Ctrl / Numpad-0. */
+/** Player 2: arrow keys + Right-Shift / Right-Ctrl (handbrake) + Numpad-0 / "/" (nitro). */
 export const P2_KEYS = {
   up: ['ArrowUp'], down: ['ArrowDown'], left: ['ArrowLeft'], right: ['ArrowRight'],
-  handbrake: ['ShiftRight', 'ControlRight', 'Numpad0'],
+  handbrake: ['ShiftRight', 'ControlRight'], boost: ['Numpad0', 'Slash'],
 };

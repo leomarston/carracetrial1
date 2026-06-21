@@ -114,8 +114,9 @@ async function boot() {
     cells.lap.textContent = `${race.lapOf(entry)}/${race.totalLaps}`;
     cells.pos.textContent = race.started ? `${entry.position}` : '—';
     cells.time.textContent = raceClock(race.raceTime);
-    const nos = Math.max(0, Math.min(1, c.rpm / c.engine.redline));
+    const nos = Math.max(0, Math.min(1, c.nitro ?? 0)); // nitrous charge
     cells.nos.style.strokeDashoffset = `${NOS_C * (1 - nos)}`;
+    cells.nos.classList.toggle('boosting', !!c.boosting);
   };
 
   const updateHud = () => {

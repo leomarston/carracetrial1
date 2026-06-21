@@ -38,7 +38,7 @@ export class Vehicle {
     this.speed = 0; // signed forward speed (m/s)
 
     // Input (set each frame from Controls), consumed in the fixed step.
-    this.input = { throttle: 0, steer: 0, handbrake: false };
+    this.input = { throttle: 0, steer: 0, handbrake: false, boost: false };
     this._steerAngle = 0; // smoothed current steering angle (rad)
 
     // --- Physics tuning derived from the car's 0–10 ratings ---
@@ -50,6 +50,16 @@ export class Vehicle {
     this.angularDamping = t.angularDamping;
     this.maxSteerAngle = 0.55; // rad lock at low speed
     this.drivenWheels = 'rear'; // RWD → power oversteer
+
+    // --- Nitrous: top speed is capped at topSpeed normally; holding boost (with
+    //     charge) raises the cap so the car pushes past it. Charge drains while
+    //     boosting and recharges otherwise. ---
+    this.nitro = 1; // charge, 0..1
+    this.boosting = false; // currently boosting (read by HUD/effects)
+    this.boostTopFactor = 1.35; // boosted top speed = topSpeed × this
+    this.boostForceFactor = 1.6; // extra engine punch while boosting
+    this.nitroDrain = 1 / 4.5; // full charge lasts ~4.5 s of boost
+    this.nitroRecharge = 1 / 13; // refills in ~13 s when not boosting
 
     this.suspension = {
       stiffness: 34,
@@ -319,12 +329,20 @@ export class Vehicle {
     const target = this.input.steer * this.maxSteerAngle * speedFactor;
     this._steerAngle += (target - this._steerAngle) * Math.min(1, this.steerSpeed * h);
 
-    // --- Throttle / brake / reverse ---
+    // --- Nitrous: boost only counts while you have charge and are accelerating
+    //     forward; it raises the speed cap and adds punch. Drains while boosting,
+    //     recharges otherwise. ---
     const throttle = this.input.throttle;
+    this.boosting = !!this.input.boost && this.nitro > 0 && throttle > 0;
+    this.nitro = Math.max(0, Math.min(1, this.nitro + (this.boosting ? -this.nitroDrain : this.nitroRecharge) * h));
+    const topNow = this.topSpeed * (this.boosting ? this.boostTopFactor : 1);
+
+    // --- Throttle / brake / reverse ---
     let engineForce = 0;
     let brake = 0;
     if (throttle > 0) {
-      engineForce = throttle * this.maxEngineForce * Math.max(0, 1 - Math.max(0, fwdSpeed) / this.topSpeed);
+      engineForce = throttle * this.maxEngineForce * Math.max(0, 1 - Math.max(0, fwdSpeed) / topNow);
+      if (this.boosting) engineForce *= this.boostForceFactor;
     } else if (throttle < 0) {
       if (fwdSpeed > 0.5) brake = this.maxBrakeForce; // braking
       else engineForce = throttle * this.maxEngineForce * 0.45 * Math.max(0, 1 - speedMs / (this.topSpeed * 0.4)); // reverse

@@ -351,11 +351,13 @@ export class Game {
     if (this.car && this.p1Spawn) {
       const s = this.p1Spawn;
       this.car.resetTo(s.x, s.y ?? 0, s.z, s.heading ?? 0);
+      this.car.nitro = 1; // full nitrous at the line
       this.rec1 = freshRecovery(s);
     }
     if (this.car2 && this.p2Spawn) {
       const s = this.p2Spawn;
       this.car2.resetTo(s.x, s.y ?? 0, s.z, s.heading ?? 0);
+      this.car2.nitro = 1;
       this.rec2 = freshRecovery(s);
     }
     for (const bot of this.bots) {
@@ -516,7 +518,7 @@ export class Game {
       // Hold both cars at the line during the countdown; otherwise drive normally.
       const holding = this.race && this.race.phase === 'countdown';
       const HOLD = { throttle: 0, steer: 0, handbrake: true };
-      const read = (c) => ({ throttle: c.throttle, steer: c.steer, handbrake: c.handbrake });
+      const read = (c) => ({ throttle: c.throttle, steer: c.steer, handbrake: c.handbrake, boost: c.boost });
 
       this.car.revving = holding;
       this.car.setInput(holding ? HOLD : read(this.input));
