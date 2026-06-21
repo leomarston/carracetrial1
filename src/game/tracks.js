@@ -99,21 +99,21 @@ export const TRACKS = {
     name: 'Moscow Streets',
     laps: 2,
     scale: 18, // tiny asset → scaled up so the cars are proportioned
-    roadRe: /dibiao/i, // drivable ground tiles (for the minimap)
+    roadRe: /lujian/i, // the actual marked road through the city (路面), not the plaza
     walls: false, // barriers + buildings are baked colliders (natural walls)
     offRoad: false, // open, uneven city → keep only the flip respawn (no off-road resets)
 
-    // Start on a verified-flat plaza, both cars facing +X into the street network.
-    spawn: { x: -65, z: 12, y: 1.5, heading: Math.PI / 2 },
-    p2Spawn: { x: -65, z: 18, y: 1.5, heading: Math.PI / 2 },
+    // Start on the road's N–S straight (a lujian segment), facing -Z up the circuit.
+    spawn: { x: 45, z: -3, y: 1.5, heading: Math.PI },
+    p2Spawn: { x: 51, z: -3, y: 1.5, heading: Math.PI },
 
-    startLine: { x: -52, z: 15, nx: 1, nz: 0, halfWidth: 16 },
-    gantry: { url: 'models/start_finish_line.glb', x: -52, z: 15, rotationY: 0, span: 26 },
+    startLine: { x: 48, z: -16, nx: 0, nz: -1, halfWidth: 14 },
+    gantry: { url: 'models/start_finish_line.glb', x: 48, z: -16, rotationY: Math.PI / 2, span: 22 },
 
-    // Loop centre inside the street network, for angular lap-progress validation.
-    loopCenter: { x: -25, z: -25 },
+    // Loop centre inside the circuit, for angular lap-progress validation.
+    loopCenter: { x: 9, z: 0 },
 
-    // Frame the minimap on the drivable street network (not the whole terrain).
-    roadBounds: { minX: -100, maxX: 70, minZ: -100, maxZ: 100 },
+    // Frame the minimap on the road circuit (lujian extent, world units).
+    roadBounds: { minX: -106, maxX: 122, minZ: -100, maxZ: 100 },
   },
 };
