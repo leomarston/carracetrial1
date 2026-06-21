@@ -269,18 +269,23 @@ export class Game {
       }
     }
 
-    // Flipped or off-road for too long → drop back onto the last good spot.
+    // Stuck: pressing the throttle but going nowhere (wedged on a wall/object).
+    const trying = Math.abs(car.input?.throttle ?? 0) > 0.1;
+    rec.stuckT = (trying && speed < 1.5) ? rec.stuckT + dt : 0;
+
+    // Flipped, off-road or stuck for too long → drop back onto the last good spot.
     rec.flipT = upright ? 0 : rec.flipT + dt;
     rec.offT = onRoad ? 0 : rec.offT + dt;
-    if ((rec.flipT > 1.2 || rec.offT > 1.6) && rec.lastGood) {
+    if ((rec.flipT > 1.2 || rec.offT > 1.6 || rec.stuckT > 4) && rec.lastGood) {
       const g = rec.lastGood;
       car.resetTo(g.x, g.y, g.z, g.heading);
       car.syncVisual(0);
-      rec.flipT = 0; rec.offT = 0; rec.recordT = 0;
+      rec.flipT = 0; rec.offT = 0; rec.recordT = 0; rec.stuckT = 0;
     }
 
-    // Wrong way: travelling against the racing-line tangent (covers both turning
-    // around and reversing back down the track).
+    // Wrong way: travelling against the track direction (covers turning around and
+    // reversing). Prefer the AI racing-line tangent; otherwise use the tangent
+    // around the loop centre, in the lap direction.
     let wrong = false;
     if (this.botWaypoints && speed > 2.5) {
       const wps = this.botWaypoints, n = wps.length;
@@ -290,6 +295,13 @@ export class Game {
       const tl = Math.hypot(tx, tz) || 1;
       const fdot = (Math.sin(car.heading) * tx + Math.cos(car.heading) * tz) / tl;
       const travelDot = Math.sign(car.speed) * fdot; // flip when reversing
+      wrong = travelDot < -0.3;
+    } else if (this.loopCenter && this.lapDir && speed > 2.5) {
+      const rx = p.x - this.loopCenter.x, rz = p.z - this.loopCenter.z;
+      const rl = Math.hypot(rx, rz) || 1;
+      const ex = this.lapDir * -rz / rl, ez = this.lapDir * rx / rl; // expected travel tangent
+      const fdot = Math.sin(car.heading) * ex + Math.cos(car.heading) * ez;
+      const travelDot = Math.sign(car.speed) * fdot;
       wrong = travelDot < -0.3;
     }
     rec.wrongT = wrong ? rec.wrongT + dt : 0;
@@ -345,6 +357,17 @@ export class Game {
   setupRace(track, minimapCanvas) {
     if (track.path) this._buildRacingLine(track); // AI line + wrong-way (skipped on no-AI maps)
     if (track.offRoad !== false) this._buildRoadGrid(); // off-road respawn (skip on open maps)
+
+    // For wrong-way on maps without an AI racing line: the expected travel
+    // direction is the tangent around the loop centre, in the lap direction
+    // (derived from the spawn heading vs that tangent).
+    this.loopCenter = track.loopCenter;
+    if (track.loopCenter && track.spawn) {
+      const c = track.loopCenter, s = track.spawn;
+      const tcx = -(s.z - c.z), tcz = (s.x - c.x); // CCW tangent at the spawn
+      const dot = Math.sin(s.heading ?? 0) * tcx + Math.cos(s.heading ?? 0) * tcz;
+      this.lapDir = dot >= 0 ? 1 : -1; // +1 = laps run counter-clockwise around the centre
+    }
     const entries = [{ car: this.car, name: this.car.name, isPlayer: true }];
     if (this.car2) entries.push({ car: this.car2, name: this.car2.name, isPlayer: true });
     for (const bot of this.bots) entries.push({ car: bot.car, name: bot.car.name, isPlayer: false });
@@ -563,6 +586,6 @@ export class Game {
 function freshRecovery(spawn) {
   return {
     lastGood: { x: spawn.x, y: spawn.y ?? 0, z: spawn.z, heading: spawn.heading ?? 0 },
-    flipT: 0, offT: 0, recordT: 0, wrongT: 0,
+    flipT: 0, offT: 0, recordT: 0, wrongT: 0, stuckT: 0,
   };
 }
